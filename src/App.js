@@ -1,66 +1,52 @@
-import { supabase } from "./lib/supabase";
 import { useState, useEffect } from "react";
-async function saveJournal() {
-  const content = prompt("Write your journal:");
+import { createClient } from "@supabase/supabase-js";
 
-  if (!content) return;
+// =================== SUPABASE ===================
+const supabase = createClient(
+  "https://xdsgupuixcpysunqsnes.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc2d1cHVpeGNweXN1bnFzbmVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1OTA1ODQsImV4cCI6MjA4ODE2NjU4NH0.Fa6zqvOQh5I7kTfzfS3dbOPB2da-6lPf2IgScaZ8-Nw"
+);
 
-  const { data, error } = await supabase.from("journal_entries").insert([
-    {
-      user_id: "demo-user",
-      content: content,
-      mood: "calm"
-    }
-  ]);
-
-  if (error) {
-    alert("Error saving journal");
-    console.log(error);
-  } else {
-    alert("Journal saved!");
-  }
-}
-<button onClick={saveJournal}>
-Write Journal
-</button>
-
-// =================== 中国传统绿色色系 ===================
-// 从图片中提取的色值
+// =================== COLOR SYSTEM — Light Theme ===================
 const C = {
-  // 深底色系
-  guanLv:    "#2A6E3F", // 官绿 — 最深，作为深背景
-  kongQue:   "#007D62", // 孔雀绿 — 强调色
-  pinLv:     "#1C8D6C", // 品绿
-  
-  // 中调绿
-  songLv:    "#3D6036", // 松绿
-  zhuLv:     "#357974", // 竹绿（带青）
-  sanLv:     "#53976F", // 三绿
-  siLv:      "#6BB392", // 四绿
-  tingWu:    "#68945C", // 庭芜绿
-  
-  // 中浅绿
-  biShan:    "#779649", // 碧山
-  caoLv:     "#799A64", // 葱绿
-  meiZi:     "#A9BD70", // 梅子青
-  ouBi:      "#C0D695", // 欧碧
-  chunChen:  "#A9BE7B", // 春辰
-  
-  // 浅嫩绿
-  cangJia:   "#A8BF8F", // 苍葭
-  biTai:     "#A8B78C", // 碧苔
-  biCi:      "#90A07D", // 碧滋
-  luBo:      "#9BB496", // 渌波
-  
-  // 极浅 / 白绿
-  duanChang: "#E8EDB9", // 断肠
-  wuXin:     "#BFD1B2", // 无心绿
-  
+  // 三种绿
+  deep:    "#2A6E3F", // 深绿 — logo, active states, buttons
+  mid:     "#4A9B6F", // 中绿 — icons, borders, accents
+  light:   "#A8D5B5", // 浅绿 — backgrounds, tags, subtle fills
+
+  // 背景层次（白色系）
+  bg:      "#FFFFFF", // 主背景
+  bgSoft:  "#F7F9F7", // 卡片背景
+  bgCard:  "#F0F5F1", // 深一点的卡片
+  border:  "#E2EDE5", // 边框
+
   // 文字
-  textLight: "#F0F5EC",
-  textMid:   "#C8DCC0",
-  textMuted: "#7A9E72",
-  textFaint: "#3D5A35",
+  textDark:  "#1A2E1F", // 主文字
+  textMid:   "#4A6655", // 次要文字
+  textMuted: "#8AAD95", // 占位/弱文字
+  textLight: "#FFFFFF", // 白字（用在深色按钮上）
+
+  // 保留兼容旧变量名
+  guanLv:    "#2A6E3F",
+  kongQue:   "#4A9B6F",
+  sanLv:     "#4A9B6F",
+  siLv:      "#4A9B6F",
+  songLv:    "#2A6E3F",
+  zhuLv:     "#4A9B6F",
+  pinLv:     "#2A6E3F",
+  tingWu:    "#4A9B6F",
+  biShan:    "#A8D5B5",
+  caoLv:     "#A8D5B5",
+  meiZi:     "#A8D5B5",
+  ouBi:      "#A8D5B5",
+  chunChen:  "#A8D5B5",
+  cangJia:   "#A8D5B5",
+  biTai:     "#A8D5B5",
+  biCi:      "#A8D5B5",
+  luBo:      "#A8D5B5",
+  duanChang: "#F0F5F1",
+  wuXin:     "#E2EDE5",
+  textFaint: "#8AAD95",
 };
 
 const css = `
@@ -69,8 +55,8 @@ const css = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
   body {
-    background: #0e1a10;
-    color: ${C.textLight};
+    background: #F7F9F7;
+    color: #1A2E1F;
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
   }
@@ -78,7 +64,7 @@ const css = `
   /* ====== SPLASH ====== */
   .splash {
     position: fixed; inset: 0;
-    background: #0a120b;
+    background: #FFFFFF;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     z-index: 100;
@@ -89,8 +75,8 @@ const css = `
   .splash-bg {
     position: absolute; inset: 0;
     background: 
-      radial-gradient(ellipse 60% 40% at 30% 60%, ${C.guanLv}18 0%, transparent 70%),
-      radial-gradient(ellipse 40% 60% at 70% 30%, ${C.kongQue}12 0%, transparent 70%);
+      radial-gradient(ellipse 60% 40% at 30% 60%, #A8D5B540 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 70% 30%, #4A9B6F20 0%, transparent 70%);
   }
 
   /* Ink wash rings */
@@ -124,7 +110,7 @@ const css = `
     font-size: 62px;
     font-weight: 300;
     letter-spacing: 12px;
-    color: ${C.textLight};
+    color: #1A2E1F;
     text-transform: uppercase;
     line-height: 1;
     filter: drop-shadow(0 0 30px ${C.sanLv}40);
@@ -156,21 +142,120 @@ const css = `
     animation: barFill 2.2s cubic-bezier(0.4,0,0.2,1) 0.6s forwards;
   }
   @keyframes barFill { 0%{width:0} 70%{width:82%} 100%{width:100%} }
-  .splash-bar-label { font-size: 9px; letter-spacing: 3px; color: ${C.textFaint}; text-transform: uppercase; animation: pulse 2s infinite; }
+  .splash-bar-label { font-size: 9px; letter-spacing: 3px; color: #8AAD95; text-transform: uppercase; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
 
   /* ====== APP SHELL ====== */
-  .app { display: flex; height: 100vh; overflow: hidden; }
+  .app { display: flex; height: 100vh; overflow: hidden; background: #F7F9F7; }
 
-  /* Sidebar */
+  /* Sidebar — desktop */
   .sidebar {
     width: 74px;
-    background: #0a120b;
-    border-right: 1px solid ${C.guanLv}30;
+    background: #FFFFFF;
+    border-right: 1px solid #E2EDE5;
     display: flex; flex-direction: column; align-items: center;
     padding: 20px 0; gap: 4px; flex-shrink: 0;
+    box-shadow: 2px 0 12px rgba(42,110,63,0.06);
   }
 
+  /* ====== MOBILE BOTTOM NAV ====== */
+  @media (max-width: 640px) {
+    html { font-size: 15px; }
+
+    .app {
+      flex-direction: column;
+      height: 100dvh;
+    }
+
+    /* Hide desktop sidebar, show bottom nav */
+    .sidebar {
+      display: none;
+    }
+
+    .bottom-nav {
+      display: flex !important;
+    }
+
+    /* Main scrolls above bottom nav */
+    .main {
+      padding-bottom: 72px;
+    }
+
+    /* Header tighter on mobile */
+    .hdr {
+      padding: 14px 18px 12px;
+    }
+    .hdr-title { font-size: 17px; }
+    .hdr-sub { font-size: 10px; }
+
+    /* Content padding */
+    .content { padding: 16px 16px 40px; }
+
+    /* All multi-col grids → single col on mobile */
+    .g4, .g3, .g2 {
+      grid-template-columns: 1fr !important;
+    }
+    .g-main {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* Cards slightly less padding */
+    .card { padding: 16px; }
+
+    /* Schedule timeline labels */
+    .sched-time { font-size: 9px; }
+
+    /* Speak stats → 2x2 on mobile */
+    .speak-stats {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* TED embed full width */
+    iframe { width: 100% !important; }
+
+    /* Recorder wrap */
+    .recorder-wrap { padding: 16px; }
+
+    /* Journal textarea shorter on mobile */
+    .journal-textarea { min-height: 80px; }
+
+    /* Mood buttons slightly smaller */
+    .mood-btn { width: 28px; height: 28px; font-size: 14px; }
+
+    /* Trip cards → 1 col */
+    .trip-grid { grid-template-columns: 1fr !important; }
+
+    /* Person avatars smaller gap */
+    .person-av { width: 42px; height: 42px; }
+  }
+
+  /* Bottom nav bar (mobile only, hidden on desktop) */
+  .bottom-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: #FFFFFF;
+    border-top: 1px solid #E2EDE5; box-shadow: 0 -2px 12px rgba(42,110,63,0.08);
+    z-index: 50;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bn-item {
+    flex: 1; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px; cursor: pointer; transition: all 0.15s;
+    border-radius: 12px; margin: 4px 2px;
+  }
+  .bn-item.active { background: #2A6E3F12; }
+  .bn-icon { font-size: 20px; line-height: 1; }
+  .bn-label {
+    font-size: 9px; color: #8AAD95;
+    font-weight: 500; letter-spacing: 0.3px;
+  }
   .sb-logo {
     margin-bottom: 18px;
     display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -179,7 +264,7 @@ const css = `
   .sb-logo-text {
     font-family: 'Cormorant Garamond', serif;
     font-size: 9px; letter-spacing: 3px;
-    color: ${C.textFaint}; text-transform: uppercase; font-weight: 300;
+    color: #8AAD95; text-transform: uppercase; font-weight: 300;
   }
 
   .nav-item {
@@ -188,39 +273,41 @@ const css = `
     cursor: pointer; transition: all 0.2s;
     border: 1px solid transparent; gap: 3px;
   }
-  .nav-item:hover { background: ${C.guanLv}25; }
-  .nav-item.active { background: ${C.guanLv}40; border-color: ${C.songLv}50; }
+  .nav-item:hover { background: #F0F5F1; }
+  .nav-item.active { background: #2A6E3F15; border-color: #2A6E3F30; }
   .nav-icon { font-size: 19px; }
-  .nav-label { font-size: 8px; color: ${C.textMuted}; font-weight: 500; letter-spacing: 0.3px; }
-  .nav-item.active .nav-label { color: ${C.siLv}; }
+  .nav-label { font-size: 8px; color: #8AAD95; font-weight: 500; letter-spacing: 0.3px; }
+  .nav-item.active .nav-label { color: #2A6E3F; }
 
   /* Main */
-  .main { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: ${C.guanLv} transparent; }
+  .main { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #A8D5B5 transparent; background: #F7F9F7; }
   .main::-webkit-scrollbar { width: 3px; }
-  .main::-webkit-scrollbar-thumb { background: ${C.guanLv}; border-radius: 2px; }
+  .main::-webkit-scrollbar-thumb { background: #A8D5B5; border-radius: 2px; }
 
   /* Header */
   .hdr {
     padding: 22px 34px 18px;
-    border-bottom: 1px solid ${C.guanLv}25;
+    border-bottom: 1px solid #E2EDE5;
     display: flex; align-items: center; justify-content: space-between;
-    background: #0e1a10;
+    background: #FFFFFF;
     position: sticky; top: 0; z-index: 10;
     backdrop-filter: blur(12px);
+    box-shadow: 0 1px 8px rgba(42,110,63,0.06);
   }
   .hdr-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 21px; font-weight: 300; color: ${C.textLight};
+    font-size: 21px; font-weight: 300; color: #1A2E1F;
     letter-spacing: 1px;
   }
-  .hdr-sub { font-size: 11px; color: ${C.textMuted}; margin-top: 3px; letter-spacing: 1px; }
+  .hdr-sub { font-size: 11px; color: #8AAD95; margin-top: 3px; letter-spacing: 1px; }
   .hdr-avatar {
     width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, ${C.guanLv}, ${C.kongQue});
+    background: linear-gradient(135deg, #2A6E3F, #4A9B6F);
     display: flex; align-items: center; justify-content: center;
     font-family: 'Cormorant Garamond', serif; font-size: 15px; cursor: pointer;
-    border: 1.5px solid ${C.sanLv}40;
-    box-shadow: 0 0 16px ${C.kongQue}30;
+    color: white;
+    border: 1.5px solid #A8D5B5;
+    box-shadow: 0 0 16px #4A9B6F20;
   }
 
   /* Content */
@@ -228,16 +315,17 @@ const css = `
 
   /* Cards */
   .card {
-    background: #131e14;
-    border: 1px solid ${C.guanLv}30;
+    background: #FFFFFF;
+    border: 1px solid #E2EDE5;
     border-radius: 16px; padding: 20px;
     transition: all 0.25s;
+    box-shadow: 0 2px 8px rgba(42,110,63,0.06);
   }
-  .card:hover { border-color: ${C.sanLv}50; box-shadow: 0 4px 24px rgba(0,0,0,0.35); }
+  .card:hover { border-color: #A8D5B5; box-shadow: 0 4px 20px rgba(42,110,63,0.1); }
 
   .card-label {
     font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
-    color: ${C.textMuted}; margin-bottom: 14px;
+    color: #8AAD95; margin-bottom: 14px;
     display: flex; align-items: center; gap: 7px;
     font-family: 'Cormorant Garamond', serif; font-weight: 300;
   }
@@ -250,29 +338,30 @@ const css = `
 
   /* Stat card */
   .stat {
-    background: #131e14;
-    border: 1px solid ${C.guanLv}30;
+    background: #FFFFFF;
+    border: 1px solid #E2EDE5;
     border-radius: 16px; padding: 20px;
     position: relative; overflow: hidden;
     transition: all 0.2s; cursor: default;
+    box-shadow: 0 2px 8px rgba(42,110,63,0.05);
   }
-  .stat:hover { border-color: ${C.sanLv}50; }
+  .stat:hover { border-color: #A8D5B5; }
   .stat::after {
     content: '';
     position: absolute; top: -20px; right: -20px;
     width: 70px; height: 70px; border-radius: 50%;
-    background: ${C.kongQue}12;
+    background: #4A9B6F10;
   }
   .stat-icon { font-size: 20px; margin-bottom: 10px; }
-  .stat-label { font-size: 10px; color: ${C.textMuted}; letter-spacing: 1px; margin-bottom: 6px; font-family: 'Cormorant Garamond', serif; }
-  .stat-val { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; color: ${C.textLight}; }
-  .stat-sub { font-size: 11px; color: ${C.siLv}; margin-top: 4px; }
+  .stat-label { font-size: 10px; color: #8AAD95; letter-spacing: 1px; margin-bottom: 6px; font-family: 'Cormorant Garamond', serif; }
+  .stat-val { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 300; color: #1A2E1F; }
+  .stat-sub { font-size: 11px; color: #4A9B6F; margin-top: 4px; }
 
   /* Section */
   .sec { margin-bottom: 22px; }
   .sec-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .sec-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 300; color: ${C.textLight}; }
-  .sec-action { font-size: 11px; color: ${C.kongQue}; cursor: pointer; font-weight: 500; }
+  .sec-title { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 300; color: #1A2E1F; }
+  .sec-action { font-size: 11px; color: #4A9B6F; cursor: pointer; font-weight: 500; }
 
   /* Calendar */
   .cal-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
@@ -280,23 +369,23 @@ const css = `
   .cal-nav { display: flex; gap: 6px; }
   .cal-btn {
     width: 26px; height: 26px; border-radius: 7px;
-    background: #1a2b1b; border: 1px solid ${C.guanLv}40;
+    background: #F0F5F1; border: 1px solid #E2EDE5;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; font-size: 11px; color: ${C.textMuted};
     transition: all 0.15s;
   }
-  .cal-btn:hover { border-color: ${C.kongQue}; color: ${C.siLv}; }
+  .cal-btn:hover { border-color: #4A9B6F; color: ${C.siLv}; }
 
   .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
-  .cal-dh { font-size: 9px; color: ${C.textFaint}; text-align: center; padding: 4px; letter-spacing: 0.5px; }
+  .cal-dh { font-size: 9px; color: #8AAD95; text-align: center; padding: 4px; letter-spacing: 0.5px; }
   .cal-day {
     aspect-ratio: 1; display: flex; flex-direction: column;
     align-items: center; justify-content: center; border-radius: 9px;
     font-size: 11px; cursor: pointer; position: relative; transition: all 0.15s; gap: 2px;
   }
   .cal-day:hover { background: ${C.guanLv}30; }
-  .cal-day.today { background: ${C.guanLv}; color: ${C.duanChang}; font-weight: 600; }
-  .cal-day.dim { color: ${C.textFaint}; }
+  .cal-day.today { background: #2A6E3F; color: #FFFFFF; font-weight: 600; }
+  .cal-day.dim { color: #8AAD95; }
   .cal-day.has-dot::after {
     content: ''; width: 3px; height: 3px; border-radius: 50%;
     background: ${C.siLv}; position: absolute; bottom: 3px;
@@ -311,11 +400,11 @@ const css = `
   .evt-date { font-size: 10px; color: ${C.textMuted}; margin-top: 1px; }
 
   /* Period */
-  .cycle-bar { height: 6px; background: #1a2b1b; border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+  .cycle-bar { height: 6px; background: #F0F5F1; border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
   .cycle-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #9b72cf, #c97c5d); }
   .phase { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10px; border: 1px solid; margin: 3px; }
-  .period-stat { background: #1a2b1b; border-radius: 10px; padding: 10px 12px; }
-  .ps-label { font-size: 9px; color: ${C.textMuted}; margin-bottom: 3px; letter-spacing: 0.5px; }
+  .period-stat { background: #F0F5F1; border-radius: 10px; padding: 10px 12px; }
+  .ps-label { font-size: 9px; color: #8AAD95; margin-bottom: 3px; letter-spacing: 0.5px; }
   .ps-val { font-size: 13px; font-weight: 500; }
 
   /* Fitness */
@@ -325,13 +414,13 @@ const css = `
     display: flex; align-items: center; justify-content: center;
     font-size: 10px; font-weight: 600; transition: all 0.2s;
   }
-  .wb-day.done { background: ${C.guanLv}; color: ${C.duanChang}; border: 1px solid ${C.songLv}; }
-  .wb-day.rest { background: #1a2b1b; color: ${C.textFaint}; border: 1px solid ${C.guanLv}20; }
+  .wb-day.done { background: #2A6E3F; color: #FFFFFF; border: 1px solid ${C.songLv}; }
+  .wb-day.rest { background: #F0F5F1; color: #8AAD95; border: 1px solid #E2EDE5; }
   .wb-day.today-wd { background: ${C.kongQue}; color: white; }
 
   .ex-item {
     display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; background: #1a2b1b;
+    padding: 9px 12px; background: #F0F5F1;
     border-radius: 11px; margin-bottom: 7px;
     border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
   }
@@ -348,7 +437,7 @@ const css = `
   /* Media */
   .media-item {
     display: flex; gap: 12px; align-items: center;
-    padding: 10px; border-radius: 11px; background: #1a2b1b;
+    padding: 10px; border-radius: 11px; background: #F0F5F1;
     margin-bottom: 7px; cursor: pointer; transition: all 0.2s;
     border: 1px solid transparent;
   }
@@ -359,7 +448,7 @@ const css = `
   }
   .media-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
   .media-sub { font-size: 10px; color: ${C.textMuted}; }
-  .media-prog { margin-top: 6px; height: 3px; background: #0e1a10; border-radius: 2px; overflow: hidden; }
+  .media-prog { margin-top: 6px; height: 3px; background: #F7F9F7; border-radius: 2px; overflow: hidden; }
   .media-prog-fill { height: 100%; background: ${C.kongQue}; border-radius: 2px; }
 
   /* Finance */
@@ -372,8 +461,8 @@ const css = `
 
   /* Travel */
   .trip-card {
-    background: linear-gradient(145deg, #1a2b1b, #131e14);
-    border: 1px solid ${C.guanLv}30; border-radius: 14px;
+    background: linear-gradient(145deg, #F0F5F1, #FFFFFF);
+    border: 1px solid #E2EDE5; border-radius: 14px;
     padding: 16px; cursor: pointer; transition: all 0.25s;
   }
   .trip-card:hover { border-color: ${C.sanLv}60; transform: translateY(-2px); }
@@ -391,7 +480,7 @@ const css = `
 
   /* Quote */
   .quote-card {
-    background: linear-gradient(135deg, ${C.guanLv}20, #131e14);
+    background: linear-gradient(135deg, ${C.guanLv}20, #FFFFFF);
     border: 1px solid ${C.sanLv}30;
     border-radius: 16px; padding: 22px 26px;
     position: relative; overflow: hidden; margin-bottom: 22px;
@@ -403,7 +492,7 @@ const css = `
   }
   .quote-text {
     font-family: 'Cormorant Garamond', serif; font-size: 14px;
-    line-height: 1.7; color: ${C.textLight}; position: relative; z-index: 1;
+    line-height: 1.7; color: #1A2E1F; position: relative; z-index: 1;
     font-weight: 300; font-style: italic;
   }
   .quote-by { font-size: 10px; color: ${C.textMuted}; margin-top: 10px; letter-spacing: 1px; }
@@ -413,10 +502,10 @@ const css = `
   .person-av {
     width: 50px; height: 50px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; background: #1a2b1b;
+    font-size: 20px; background: #F0F5F1;
     border: 1.5px solid ${C.guanLv}40; transition: all 0.2s;
   }
-  .person:hover .person-av { border-color: ${C.kongQue}; box-shadow: 0 0 12px ${C.kongQue}30; }
+  .person:hover .person-av { border-color: #4A9B6F; box-shadow: 0 0 12px ${C.kongQue}30; }
   .person-name { font-size: 10px; color: ${C.textMuted}; }
   .person-bday { font-size: 9px; color: #c97c5d; font-weight: 600; }
 
@@ -428,15 +517,15 @@ const css = `
   /* ====== 碎碎念 JOURNAL ====== */
   .journal-textarea {
     width: 100%; min-height: 110px;
-    background: #1a2b1b; border: 1px solid ${C.guanLv}40;
+    background: #F0F5F1; border: 1px solid #E2EDE5;
     border-radius: 12px; padding: 14px 16px;
-    color: ${C.textLight}; font-family: 'Cormorant Garamond', serif;
+    color: #1A2E1F; font-family: 'Cormorant Garamond', serif;
     font-size: 13px; font-weight: 300; line-height: 1.8;
     resize: none; outline: none; transition: all 0.2s;
     letter-spacing: 0.5px;
   }
-  .journal-textarea::placeholder { color: ${C.textFaint}; font-style: italic; }
-  .journal-textarea:focus { border-color: ${C.kongQue}60; box-shadow: 0 0 0 3px ${C.kongQue}10; }
+  .journal-textarea::placeholder { color: #8AAD95; font-style: italic; }
+  .journal-textarea:focus { border-color: #4A9B6F60; box-shadow: 0 0 0 3px ${C.kongQue}10; }
 
   .journal-toolbar {
     display: flex; align-items: center; justify-content: space-between;
@@ -447,34 +536,34 @@ const css = `
     width: 32px; height: 32px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 16px; cursor: pointer; transition: all 0.15s;
-    background: #1a2b1b; border: 1px solid transparent;
+    background: #F0F5F1; border: 1px solid transparent;
   }
-  .mood-btn:hover { transform: scale(1.15); border-color: ${C.guanLv}50; }
-  .mood-btn.selected { background: ${C.guanLv}40; border-color: ${C.kongQue}; transform: scale(1.15); }
+  .mood-btn:hover { transform: scale(1.15); border-color: #A8D5B5; }
+  .mood-btn.selected { background: ${C.guanLv}40; border-color: #4A9B6F; transform: scale(1.15); }
   .journal-save {
     padding: 7px 18px; border-radius: 20px; font-size: 11px;
-    background: ${C.guanLv}; color: ${C.duanChang};
+    background: #2A6E3F; color: #FFFFFF;
     border: none; cursor: pointer; font-family: 'Cormorant Garamond', serif;
     font-weight: 300; letter-spacing: 1px; transition: all 0.2s;
   }
-  .journal-save:hover { background: ${C.kongQue}; }
+  .journal-save:hover { background: #4A9B6F; }
 
   .journal-entry {
-    padding: 14px 16px; background: #1a2b1b;
+    padding: 14px 16px; background: #F0F5F1;
     border-radius: 12px; margin-bottom: 8px;
-    border-left: 3px solid ${C.guanLv}; transition: all 0.2s;
+    border-left: 3px solid #4A9B6F; transition: all 0.2s;
     cursor: pointer;
   }
-  .journal-entry:hover { border-left-color: ${C.kongQue}; background: #1f3320; }
+  .journal-entry:hover { border-left-color: #2A6E3F; background: #E8F2EB; }
   .je-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
-  .je-time { font-size: 10px; color: ${C.textFaint}; letter-spacing: 0.5px; }
+  .je-time { font-size: 10px; color: #8AAD95; letter-spacing: 0.5px; }
   .je-mood { font-size: 14px; }
-  .je-text { font-size: 12px; color: ${C.textMid}; line-height: 1.7; font-family: 'Cormorant Garamond', serif; font-weight: 300; }
+  .je-text { font-size: 12px; color: #4A6655; line-height: 1.7; font-family: 'Cormorant Garamond', serif; font-weight: 300; }
   .je-tags { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
   .je-tag {
     font-size: 9px; padding: 2px 8px; border-radius: 20px;
     background: ${C.guanLv}25; color: ${C.textMuted};
-    border: 1px solid ${C.guanLv}30; letter-spacing: 0.5px;
+    border: 1px solid #E2EDE5; letter-spacing: 0.5px;
   }
 
   /* ====== DAILY SCHEDULE ====== */
@@ -491,30 +580,30 @@ const css = `
   }
   .sched-time {
     position: absolute; left: -52px; width: 44px;
-    font-size: 10px; color: ${C.textFaint}; text-align: right;
+    font-size: 10px; color: #8AAD95; text-align: right;
     padding-top: 10px; letter-spacing: 0.3px; flex-shrink: 0;
   }
   .sched-dot {
     position: absolute; left: -27px; top: 12px;
     width: 8px; height: 8px; border-radius: 50%;
     border: 1.5px solid ${C.guanLv};
-    background: #0e1a10; flex-shrink: 0; z-index: 1;
+    background: #F7F9F7; flex-shrink: 0; z-index: 1;
     transition: all 0.2s;
   }
-  .sched-item.done .sched-dot { background: ${C.guanLv}; border-color: ${C.kongQue}; }
+  .sched-item.done .sched-dot { background: ${C.guanLv}; border-color: #4A9B6F; }
   .sched-item.now .sched-dot { background: ${C.kongQue}; border-color: ${C.siLv}; box-shadow: 0 0 8px ${C.kongQue}80; }
 
   .sched-block {
     flex: 1; padding: 10px 14px; border-radius: 11px;
-    background: #1a2b1b; border: 1px solid transparent;
+    background: #F0F5F1; border: 1px solid transparent;
     transition: all 0.2s; cursor: pointer;
   }
-  .sched-block:hover { border-color: ${C.guanLv}50; background: #1f3320; }
+  .sched-block:hover { border-color: ${C.guanLv}50; background: #E8F2EB; }
   .sched-item.done .sched-block { opacity: 0.5; }
-  .sched-item.now .sched-block { border-color: ${C.kongQue}40; background: ${C.kongQue}12; }
+  .sched-item.now .sched-block { border-color: #4A9B6F40; background: ${C.kongQue}12; }
 
-  .sched-title { font-size: 13px; color: ${C.textLight}; margin-bottom: 2px; }
-  .sched-item.done .sched-title { text-decoration: line-through; color: ${C.textFaint}; }
+  .sched-title { font-size: 13px; color: #1A2E1F; margin-bottom: 2px; }
+  .sched-item.done .sched-title { text-decoration: line-through; color: #8AAD95; }
   .sched-meta { font-size: 10px; color: ${C.textMuted}; display: flex; gap: 8px; align-items: center; }
   .sched-cat {
     font-size: 9px; padding: 1px 7px; border-radius: 20px;
@@ -531,11 +620,11 @@ const css = `
     display: flex; align-items: center; gap: 8px;
     padding: 9px 14px; border-radius: 11px;
     background: transparent; border: 1px dashed ${C.guanLv}40;
-    color: ${C.textFaint}; font-size: 12px; cursor: pointer;
+    color: #8AAD95; font-size: 12px; cursor: pointer;
     transition: all 0.2s; width: 100%; margin-top: 6px;
     font-family: 'Cormorant Garamond', serif;
   }
-  .add-sched-btn:hover { border-color: ${C.kongQue}60; color: ${C.textMuted}; background: ${C.guanLv}10; }
+  .add-sched-btn:hover { border-color: #4A9B6F60; color: ${C.textMuted}; background: ${C.guanLv}10; }
 
   /* ====== EXPRESSION STUDIO ====== */
   .speak-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -543,11 +632,11 @@ const css = `
   /* TED card */
   .ted-item {
     display: flex; gap: 14px; align-items: flex-start;
-    padding: 14px; background: #1a2b1b; border-radius: 13px;
+    padding: 14px; background: #F0F5F1; border-radius: 13px;
     border: 1px solid transparent; cursor: pointer; transition: all 0.2s;
     margin-bottom: 8px;
   }
-  .ted-item:hover { border-color: ${C.guanLv}60; background: #1f3320; }
+  .ted-item:hover { border-color: ${C.guanLv}60; background: #E8F2EB; }
   .ted-item.active { border-color: #e2231a50; background: #e2231a08; }
   .ted-thumb {
     width: 72px; height: 50px; border-radius: 8px; flex-shrink: 0;
@@ -561,15 +650,15 @@ const css = `
     font-size: 18px;
   }
   .ted-item:hover .ted-play-btn { opacity: 1; }
-  .ted-title { font-size: 12px; font-weight: 500; color: ${C.textLight}; line-height: 1.4; margin-bottom: 4px; }
+  .ted-title { font-size: 12px; font-weight: 500; color: #1A2E1F; line-height: 1.4; margin-bottom: 4px; }
   .ted-speaker { font-size: 10px; color: ${C.textMuted}; margin-bottom: 5px; }
   .ted-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .ted-tag {
     font-size: 9px; padding: 2px 7px; border-radius: 20px;
     background: ${C.guanLv}25; color: ${C.textMuted};
-    border: 1px solid ${C.guanLv}30;
+    border: 1px solid #E2EDE5;
   }
-  .ted-duration { font-size: 9px; color: ${C.textFaint}; }
+  .ted-duration { font-size: 9px; color: #8AAD95; }
   .ted-badge {
     font-size: 9px; padding: 2px 7px; border-radius: 20px;
     background: #e2231a20; color: #e2231a; border: 1px solid #e2231a40;
@@ -578,11 +667,11 @@ const css = `
 
   /* Recorder */
   .recorder-wrap {
-    background: linear-gradient(135deg, ${C.guanLv}18, #131e14);
+    background: linear-gradient(135deg, ${C.guanLv}18, #FFFFFF);
     border: 1px solid ${C.guanLv}35; border-radius: 16px; padding: 24px;
   }
   .rec-visualizer {
-    height: 56px; background: #0e1a10; border-radius: 10px;
+    height: 56px; background: #F7F9F7; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     gap: 3px; margin-bottom: 18px; overflow: hidden; padding: 0 12px;
   }
@@ -622,45 +711,45 @@ const css = `
     width: 40px; height: 40px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 15px; cursor: pointer; transition: all 0.2s;
-    background: #1a2b1b; border: 1px solid ${C.guanLv}40; color: ${C.textMuted};
+    background: #F0F5F1; border: 1px solid #E2EDE5; color: ${C.textMuted};
   }
-  .rec-btn-secondary:hover { border-color: ${C.kongQue}; color: ${C.textLight}; }
+  .rec-btn-secondary:hover { border-color: #4A9B6F; color: #1A2E1F; }
 
-  .rec-timer { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: ${C.textLight}; text-align: center; margin-bottom: 8px; letter-spacing: 3px; }
+  .rec-timer { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: #1A2E1F; text-align: center; margin-bottom: 8px; letter-spacing: 3px; }
   .rec-status { font-size: 10px; color: ${C.textMuted}; text-align: center; letter-spacing: 2px; text-transform: uppercase; }
   .rec-status.live { color: #e2231a; animation: pulse 1.5s infinite; }
 
   .rec-recordings { margin-top: 16px; }
   .rec-entry {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 12px; background: #1a2b1b; border-radius: 11px;
+    padding: 10px 12px; background: #F0F5F1; border-radius: 11px;
     margin-bottom: 6px; cursor: pointer; transition: all 0.2s;
     border: 1px solid transparent;
   }
   .rec-entry:hover { border-color: ${C.guanLv}50; }
   .rec-play { width: 30px; height: 30px; border-radius: 50%; background: ${C.guanLv}; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
   .rec-info { flex: 1; }
-  .rec-name { font-size: 12px; color: ${C.textLight}; margin-bottom: 2px; }
+  .rec-name { font-size: 12px; color: #1A2E1F; margin-bottom: 2px; }
   .rec-dur { font-size: 10px; color: ${C.textMuted}; }
   .rec-wave { flex: 1; height: 24px; display: flex; align-items: center; gap: 2px; }
   .rec-wv { width: 2px; border-radius: 1px; background: ${C.guanLv}60; }
 
   /* Practice prompts */
   .prompt-card {
-    background: linear-gradient(135deg, ${C.kongQue}15, #131e14);
+    background: linear-gradient(135deg, ${C.kongQue}15, #FFFFFF);
     border: 1px solid ${C.kongQue}30; border-radius: 14px;
     padding: 18px; cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
   }
-  .prompt-card:hover { border-color: ${C.kongQue}60; transform: translateY(-1px); }
+  .prompt-card:hover { border-color: #4A9B6F60; transform: translateY(-1px); }
   .prompt-label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: ${C.kongQue}; margin-bottom: 8px; }
-  .prompt-text { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-style: italic; color: ${C.textLight}; line-height: 1.5; }
+  .prompt-text { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-style: italic; color: #1A2E1F; line-height: 1.5; }
   .prompt-hint { font-size: 10px; color: ${C.textMuted}; margin-top: 8px; }
 
   /* Stats row */
   .speak-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
-  .speak-stat { background: #1a2b1b; border-radius: 12px; padding: 13px; text-align: center; border: 1px solid ${C.guanLv}25; }
-  .speak-stat-val { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; color: ${C.textLight}; }
-  .speak-stat-label { font-size: 9px; color: ${C.textMuted}; margin-top: 3px; letter-spacing: 0.5px; }
+  .speak-stat { background: #F0F5F1; border-radius: 12px; padding: 13px; text-align: center; border: 1px solid #E2EDE5; }
+  .speak-stat-val { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; color: #1A2E1F; }
+  .speak-stat-label { font-size: 9px; color: #8AAD95; margin-top: 3px; letter-spacing: 0.5px; }
   .fu { animation: fadeUp 0.4s ease forwards; }
   .d1{animation-delay:.05s;opacity:0} .d2{animation-delay:.1s;opacity:0} 
   .d3{animation-delay:.15s;opacity:0} .d4{animation-delay:.2s;opacity:0}
@@ -673,7 +762,7 @@ const css = `
     border-radius: 20px; font-size: 11px; color: ${C.siLv};
     cursor: pointer; transition: all 0.2s; margin-top: 10px;
   }
-  .open-btn:hover { background: ${C.guanLv}50; border-color: ${C.kongQue}; }
+  .open-btn:hover { background: ${C.guanLv}50; border-color: #4A9B6F; }
 
   /* Badge */
   .badge {
@@ -684,18 +773,18 @@ const css = `
   /* Progress bar */
   .prog-row { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
   .prog-label { width: 50px; font-size: 10px; color: ${C.textMuted}; }
-  .prog-bar { flex: 1; height: 5px; background: #1a2b1b; border-radius: 3px; overflow: hidden; }
+  .prog-bar { flex: 1; height: 5px; background: #F0F5F1; border-radius: 3px; overflow: hidden; }
   .prog-fill { height: 100%; border-radius: 3px; }
   .prog-pct { width: 28px; font-size: 10px; color: ${C.textMuted}; text-align: right; }
 
   /* Net worth hero */
   .nw-hero {
-    background: linear-gradient(135deg, ${C.guanLv}30, #131e14);
+    background: linear-gradient(135deg, ${C.guanLv}30, #FFFFFF);
     border: 1px solid ${C.sanLv}30;
     border-radius: 14px; padding: 18px; margin-bottom: 14px;
   }
   .nw-label { font-size: 10px; color: ${C.textMuted}; margin-bottom: 6px; letter-spacing: 1px; }
-  .nw-val { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; color: ${C.textLight}; }
+  .nw-val { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; color: #1A2E1F; }
   .nw-sub { font-size: 11px; color: ${C.siLv}; margin-top: 5px; }
 `;
 
@@ -715,7 +804,7 @@ const VerdeLogo = ({ size = 44 }) => (
       <linearGradient id="lg1" x1="40" y1="16" x2="40" y2="68" gradientUnits="userSpaceOnUse">
         <stop offset="0%" stopColor={C.tingWu}/>
         <stop offset="50%" stopColor={C.guanLv}/>
-        <stop offset="100%" stopColor="#0e1a10"/>
+        <stop offset="100%" stopColor="#F7F9F7"/>
       </linearGradient>
     </defs>
   </svg>
@@ -791,7 +880,7 @@ const Period = () => {
           </div>
         ))}
       </div>
-      <div style={{background:'#1a2b1b',borderRadius:10,padding:'11px 13px',marginBottom:12}}>
+      <div style={{background:'#F0F5F1',borderRadius:10,padding:'11px 13px',marginBottom:12}}>
         <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>💊 Next period expected</div>
         <div style={{fontSize:15,fontFamily:"'Cormorant Garamond',serif",fontWeight:300}}>April 1, 2026 <span style={{fontSize:11,color:C.textMuted}}>· in 14 days</span></div>
       </div>
@@ -831,7 +920,7 @@ const Fitness = () => {
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
         {[{l:'Calories',v:'487',u:'kcal',e:'🔥'},{l:'Active Time',v:'52',u:'min',e:'⏱'},{l:'Streak',v:'12',u:'days',e:'⚡'}].map((s,i)=>(
-          <div key={i} style={{background:'#1a2b1b',borderRadius:11,padding:'11px',textAlign:'center'}}>
+          <div key={i} style={{background:'#F0F5F1',borderRadius:11,padding:'11px',textAlign:'center'}}>
             <div style={{fontSize:18,marginBottom:4}}>{s.e}</div>
             <div style={{fontSize:18,fontFamily:"'Cormorant Garamond',serif",fontWeight:300}}>{s.v}</div>
             <div style={{fontSize:9,color:C.textMuted}}>{s.u}</div>
@@ -887,7 +976,7 @@ const Reading = () => {
       {tab==='pod'&&<>
         {pods.map((p,i)=>(
           <div key={i} className="media-item">
-            <div className="media-cov" style={{background:'#1a2b1b'}}>{p.emoji}</div>
+            <div className="media-cov" style={{background:'#F0F5F1'}}>{p.emoji}</div>
             <div style={{flex:1}}>
               <div className="media-title">{p.title}</div>
               <div className="media-sub">{p.ep}</div>
@@ -954,7 +1043,7 @@ const Travel = () => {
           </div>
         ))}
       </div>
-      <div style={{padding:'13px',background:'#1a2b1b',borderRadius:12,display:'flex',gap:12,alignItems:'center'}}>
+      <div style={{padding:'13px',background:'#F0F5F1',borderRadius:12,display:'flex',gap:12,alignItems:'center'}}>
         <span style={{fontSize:26}}>🗺</span>
         <div><div style={{fontSize:13,fontWeight:600,marginBottom:2}}>Camping Checklist</div><div style={{fontSize:10,color:C.textMuted}}>Wuyi Mountains · 8 items ready</div></div>
         <div style={{marginLeft:'auto',fontSize:11,color:C.kongQue}}>View →</div>
@@ -963,26 +1052,50 @@ const Travel = () => {
   );
 };
 
-// =================== 碎碎念 JOURNAL ===================
+// =================== JOURNAL (Supabase connected) ===================
 const Journal = () => {
   const [text, setText] = useState('');
   const [mood, setMood] = useState(null);
-  const [entries, setEntries] = useState([
-    { time: 'Today 08:14', mood: '🌿', text: 'Went for a run this morning and spotted wildflowers along the path. Life feels quietly beautiful right now. Must hold onto this feeling.', tags: ['morning run', 'good vibes'] },
-    { time: 'Yesterday 22:30', mood: '🌙', text: 'A bit tired, but I finished everything I planned today — deeply satisfying. Remember to call Mom tomorrow about her birthday gift.', tags: ['accomplished', 'reminder'] },
-    { time: 'Mar 2', mood: '💭', text: "Been reflecting on my career direction lately. I think I need some stillness before deciding. Read a chapter on financial freedom in 'The Psychology of Money' — really resonated.", tags: ['reflection', 'reading', 'planning'] },
-  ]);
+  const [entries, setEntries] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { loadEntries(); }, []);
+
+  const loadEntries = async () => {
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (data) setEntries(data);
+    if (error) console.error('Load error:', error);
+  };
+
+  const handleSave = async () => {
+    if (!text.trim()) return;
+    setSaving(true);
+    const { error } = await supabase.from('journal_entries').insert({
+      text: text.trim(),
+      mood: mood || '💚',
+      tags: [],
+      user_id: 'nikki',
+    });
+    if (error) { console.error('Save error:', error); }
+    else { setText(''); setMood(null); await loadEntries(); }
+    setSaving(false);
+  };
+
+  const fmtTime = (ts) => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / 86400000);
+    const hhmm = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    if (diffDays === 0) return `Today ${hhmm}`;
+    if (diffDays === 1) return `Yesterday ${hhmm}`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const moods = ['🌿','☀️','🌙','💭','🔥','🌧','✨','💚'];
-
-  const handleSave = () => {
-    if (!text.trim()) return;
-    const now = new Date();
-    const timeStr = `Today ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-    setEntries([{ time: timeStr, mood: mood || '💚', text: text.trim(), tags: [] }, ...entries]);
-    setText('');
-    setMood(null);
-  };
 
   return (
     <div>
@@ -1000,7 +1113,9 @@ const Journal = () => {
               <div key={m} className={`mood-btn ${mood===m?'selected':''}`} onClick={() => setMood(m===mood?null:m)}>{m}</div>
             ))}
           </div>
-          <button className="journal-save" onClick={handleSave}>Save ✓</button>
+          <button className="journal-save" onClick={handleSave} disabled={saving}>
+            {saving ? '...' : 'Save ✓'}
+          </button>
         </div>
       </div>
 
@@ -1008,14 +1123,19 @@ const Journal = () => {
         <div className="sec-title">Past Entries</div>
         <div className="sec-action">View All →</div>
       </div>
+      {entries.length === 0 && (
+        <div style={{textAlign:'center', color: C.textFaint, fontSize: 13, padding: '24px 0'}}>
+          No entries yet — write your first one above 🌿
+        </div>
+      )}
       {entries.map((e, i) => (
-        <div key={i} className="journal-entry">
+        <div key={e.id || i} className="journal-entry">
           <div className="je-header">
-            <div className="je-time">{e.time}</div>
-            <div className="je-mood">{e.mood}</div>
+            <div className="je-time">{fmtTime(e.created_at)}</div>
+            <div className="je-mood">{e.mood || '💚'}</div>
           </div>
           <div className="je-text">{e.text}</div>
-          {e.tags.length > 0 && (
+          {e.tags && e.tags.length > 0 && (
             <div className="je-tags">
               {e.tags.map((t, j) => <span key={j} className="je-tag"># {t}</span>)}
             </div>
@@ -1026,55 +1146,87 @@ const Journal = () => {
   );
 };
 
-// =================== DAILY SCHEDULE ===================
+// =================== DAILY SCHEDULE (Supabase connected) ===================
 const Schedule = () => {
-  const [items, setItems] = useState([
-    { time: '07:00', title: 'Morning Run 5km', meta: 'Fitness · 30 min', cat: 'Fitness', catColor: '#53976F', done: true, now: false },
-    { time: '08:30', title: 'Meditation & Journaling', meta: 'Mindfulness · 15 min', cat: 'Habit', catColor: '#007D62', done: true, now: false },
-    { time: '09:00', title: 'Deep Work · Project A', meta: 'Work · 2 hours', cat: 'Work', catColor: '#5a7a9e', done: false, now: true },
-    { time: '11:30', title: 'Reply Emails & Messages', meta: 'Work · 30 min', cat: 'Work', catColor: '#5a7a9e', done: false, now: false },
-    { time: '12:30', title: 'Lunch + Walk', meta: 'Rest · 1 hour', cat: 'Life', catColor: '#9e7a5a', done: false, now: false },
-    { time: '14:00', title: 'Read · Atomic Habits', meta: 'Learning · 45 min', cat: 'Reading', catColor: '#6a5a9e', done: false, now: false },
-    { time: '17:00', title: 'Call Mom', meta: 'Family · remember birthday gift', cat: 'People', catColor: '#c97c5d', done: false, now: false },
-    { time: '18:30', title: 'Yoga', meta: 'Fitness · 40 min', cat: 'Fitness', catColor: '#53976F', done: false, now: false },
-    { time: '21:00', title: 'Daily Review & Plan Tomorrow', meta: 'Habit · 15 min', cat: 'Habit', catColor: '#007D62', done: false, now: false },
-  ]);
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
-  const toggle = i => setItems(items.map((it, idx) => idx===i ? {...it, done: !it.done} : it));
+  const DEFAULT_ITEMS = [
+    { title: 'Morning Run 5km', time: '07:00', meta: 'Fitness · 30 min', cat: 'Fitness', cat_color: '#53976F', done: false },
+    { title: 'Meditation & Journaling', time: '08:30', meta: 'Mindfulness · 15 min', cat: 'Habit', cat_color: '#007D62', done: false },
+    { title: 'Deep Work · Project A', time: '09:00', meta: 'Work · 2 hours', cat: 'Work', cat_color: '#5a7a9e', done: false },
+    { title: 'Reply Emails & Messages', time: '11:30', meta: 'Work · 30 min', cat: 'Work', cat_color: '#5a7a9e', done: false },
+    { title: 'Lunch + Walk', time: '12:30', meta: 'Rest · 1 hour', cat: 'Life', cat_color: '#9e7a5a', done: false },
+    { title: 'Read · Atomic Habits', time: '14:00', meta: 'Learning · 45 min', cat: 'Reading', cat_color: '#6a5a9e', done: false },
+    { title: 'Call Mom', time: '17:00', meta: 'Family · remember birthday gift', cat: 'People', cat_color: '#c97c5d', done: false },
+    { title: 'Yoga', time: '18:30', meta: 'Fitness · 40 min', cat: 'Fitness', cat_color: '#53976F', done: false },
+    { title: 'Daily Review & Plan Tomorrow', time: '21:00', meta: 'Habit · 15 min', cat: 'Habit', cat_color: '#007D62', done: false },
+  ];
+
+  const today = () => new Date().toISOString().split('T')[0];
+
+  useEffect(() => { loadItems(); }, []);
+
+  const loadItems = async () => {
+    const { data } = await supabase
+      .from('schedule_items')
+      .select('*')
+      .eq('date', today())
+      .order('time');
+    if (data && data.length > 0) {
+      setItems(data);
+    } else {
+      const toInsert = DEFAULT_ITEMS.map(it => ({ ...it, user_id: 'nikki', date: today() }));
+      const { data: inserted } = await supabase.from('schedule_items').insert(toInsert).select();
+      if (inserted) setItems(inserted);
+    }
+    setLoaded(true);
+  };
+
+  const toggle = async (item) => {
+    const { data } = await supabase
+      .from('schedule_items')
+      .update({ done: !item.done })
+      .eq('id', item.id)
+      .select()
+      .single();
+    if (data) setItems(items.map(it => it.id === item.id ? data : it));
+  };
+
+  const doneCount = items.filter(x => x.done).length;
 
   return (
     <div>
-      {/* 今日进度 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18,
-        padding: '12px 16px', background: '#1a2b1b', borderRadius: 12,
+        padding: '12px 16px', background: '#F0F5F1', borderRadius: 12,
         border: `1px solid ${C.guanLv}30` }}>
         <div style={{ fontSize: 24 }}>📋</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 5 }}>Today's Progress</div>
-          <div style={{ height: 5, background: '#0e1a10', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{ width: `${(items.filter(x=>x.done).length / items.length * 100).toFixed(0)}%`,
-              height: '100%', background: `linear-gradient(90deg, ${C.guanLv}, ${C.kongQue})`, borderRadius: 3,
-              transition: 'width 0.4s ease' }} />
+          <div style={{ height: 5, background: '#F7F9F7', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: items.length ? `${(doneCount/items.length*100).toFixed(0)}%` : '0%',
+              height: '100%', background: `linear-gradient(90deg, ${C.guanLv}, ${C.kongQue})`,
+              borderRadius: 3, transition: 'width 0.4s ease' }} />
           </div>
         </div>
         <div style={{ fontSize: 18, fontFamily: "'Cormorant Garamond', serif", fontWeight: 300, color: C.siLv }}>
-          {items.filter(x=>x.done).length}<span style={{ fontSize: 11, color: C.textMuted }}>/{items.length}</span>
+          {doneCount}<span style={{ fontSize: 11, color: C.textMuted }}>/{items.length}</span>
         </div>
       </div>
 
-      {/* 时间线 */}
+      {!loaded && <div style={{textAlign:'center',color:C.textFaint,fontSize:12,padding:'20px 0'}}>Loading…</div>}
+
       <div className="schedule-timeline">
-        {items.map((it, i) => (
-          <div key={i} className={`sched-item ${it.done?'done':''} ${it.now?'now':''}`} onClick={() => toggle(i)}>
+        {items.map((it) => (
+          <div key={it.id} className={`sched-item ${it.done?'done':''}`} onClick={() => toggle(it)}>
             <div className="sched-time">{it.time}</div>
             <div className="sched-dot" />
             <div className="sched-block">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                 <div className="sched-title">{it.title}</div>
-                {it.now && <div className="sched-now-badge">In Progress</div>}
               </div>
               <div className="sched-meta">
-                <div className="sched-cat" style={{ color: it.catColor, borderColor: it.catColor+'50', background: it.catColor+'15' }}>{it.cat}</div>
+                <div className="sched-cat" style={{ color: it.cat_color, borderColor: it.cat_color+'50', background: it.cat_color+'15' }}>{it.cat}</div>
                 <span>{it.meta}</span>
               </div>
             </div>
@@ -1184,8 +1336,8 @@ const Speak = () => {
                   <span className="ted-tag" style={{color:C.siLv,borderColor:C.guanLv+'50',background:C.guanLv+'20'}}>{t.level}</span>
                 </div>
                 {activeTed===i && (
-                  <div style={{marginTop:10,padding:'10px 12px',background:'#0e1a10',borderRadius:9}}>
-                    <div style={{height:4,background:'#1a2b1b',borderRadius:2,marginBottom:8,overflow:'hidden'}}>
+                  <div style={{marginTop:10,padding:'10px 12px',background:'#F7F9F7',borderRadius:9}}>
+                    <div style={{height:4,background:'#F0F5F1',borderRadius:2,marginBottom:8,overflow:'hidden'}}>
                       <div style={{width:'35%',height:'100%',background:`linear-gradient(90deg,${C.guanLv},${C.kongQue})`,borderRadius:2}}/>
                     </div>
                     <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:C.textFaint}}>
@@ -1193,7 +1345,7 @@ const Speak = () => {
                     </div>
                     <div style={{display:'flex',gap:8,marginTop:10}}>
                       {['▶ Play','↩ Shadow','📝 Notes'].map((btn,j)=>(
-                        <div key={j} style={{padding:'5px 12px',borderRadius:20,background:j===0?C.guanLv:'#1a2b1b',
+                        <div key={j} style={{padding:'5px 12px',borderRadius:20,background:j===0?C.guanLv:'#F0F5F1',
                           border:`1px solid ${j===0?C.guanLv:C.guanLv+'40'}`,fontSize:11,cursor:'pointer',
                           color:j===0?C.duanChang:C.textMuted,transition:'all 0.2s'}}>
                           {btn}
@@ -1237,7 +1389,7 @@ const Speak = () => {
             <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:8}}>
               {['🎙 Mic','🔊 Speaker','⚙ Settings'].map((b,i)=>(
                 <div key={i} style={{fontSize:10,color:C.textFaint,cursor:'pointer',padding:'4px 10px',
-                  borderRadius:20,border:`1px solid ${C.guanLv}25`,background:'#0e1a10'}}>{b}</div>
+                  borderRadius:20,border:`1px solid ${C.guanLv}25`,background:'#F7F9F7'}}>{b}</div>
               ))}
             </div>
           </div>
@@ -1298,7 +1450,7 @@ const Speak = () => {
               {icon:'⏸', tip:'The Pause', desc:'Silence is powerful. A 2-second pause before a key point doubles its impact.'},
               {icon:'👁', tip:'Eye Contact', desc:'Look at one person per thought, then move. Creates intimacy at scale.'},
             ].map((t,i) => (
-              <div key={i} style={{display:'flex',gap:12,padding:'11px 14px',background:'#1a2b1b',
+              <div key={i} style={{display:'flex',gap:12,padding:'11px 14px',background:'#F0F5F1',
                 borderRadius:11,marginBottom:7,border:`1px solid ${C.guanLv}20`,alignItems:'flex-start'}}>
                 <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
                 <div>
@@ -1459,6 +1611,23 @@ export default function App() {
   const [splash, setSplash] = useState(true);
   const [view, setView] = useState('home');
 
+  // Ensure proper mobile viewport
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+      meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+    }
+  }, []);
+
+  // Mobile nav shows 5 most important items
+  const MOBILE_NAV = [
+    {id:'home',    icon:'⊞',  label:'Home'},
+    {id:'schedule',icon:'◷',  label:'Schedule'},
+    {id:'journal', icon:'✍️', label:'Journal'},
+    {id:'speak',   icon:'🎙', label:'Speak'},
+    {id:'more',    icon:'···', label:'More'},
+  ];
+
   const renderPage = () => {
     switch(view) {
       case 'home': return <Dashboard go={setView}/>;
@@ -1500,8 +1669,30 @@ export default function App() {
           </div>
           <div className="content">{renderPage()}</div>
         </div>
+
+        {/* Mobile bottom navigation */}
+        <nav className="bottom-nav">
+          {MOBILE_NAV.map(n => (
+            <div
+              key={n.id}
+              className={`bn-item ${view===n.id ? 'active' : ''}`}
+              onClick={() => {
+                if (n.id === 'more') {
+                  // cycle through remaining pages
+                  const extras = ['calendar','fitness','reading','travel'];
+                  const cur = extras.indexOf(view);
+                  setView(extras[(cur + 1) % extras.length]);
+                } else {
+                  setView(n.id);
+                }
+              }}
+            >
+              <div className="bn-icon">{n.icon}</div>
+              <div className="bn-label">{n.label}</div>
+            </div>
+          ))}
+        </nav>
       </div>
     </>
   );
 }
-
