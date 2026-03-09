@@ -813,9 +813,16 @@ const VerdeLogo = ({ size = 44 }) => (
 // =================== CALENDAR ===================
 const Cal = () => {
   const [month, setMonth] = useState(new Date(2026, 2, 1));
-  const bdays = [15, 22, 8];
-  const periods = [10,11,12,13,14];
-  const events = [5,18,25];
+  const [events, setEvents] = useState([
+    {day:15, name:"Mom's Birthday", color:'#c97c5d', type:'Birthday'},
+    {day:18, name:'Anniversary', color:'#4A9B6F', type:'Special'},
+    {day:22, name:"Friend Lily's Birthday", color:'#c97c5d', type:'Birthday'},
+    {day:10, name:'Period Expected', color:'#9b72cf', type:'Health'},
+  ]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [selDay, setSelDay] = useState(null);
+  const [form, setForm] = useState({name:'', type:'Special', color:'#4A9B6F'});
+
   const dim = new Date(month.getFullYear(), month.getMonth()+1, 0).getDate();
   const first = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
   const mname = month.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -823,8 +830,73 @@ const Cal = () => {
   for (let i=0;i<first;i++) days.push(null);
   for (let i=1;i<=dim;i++) days.push(i);
 
+  const today = new Date();
+  const isToday = (d) => d === today.getDate() &&
+    month.getMonth() === today.getMonth() &&
+    month.getFullYear() === today.getFullYear();
+
+  const dayEvents = (d) => events.filter(e => e.day === d);
+
+  const handleDayClick = (d) => {
+    if (!d) return;
+    setSelDay(d);
+    setForm({name:'', type:'Special', color:'#4A9B6F'});
+    setShowAdd(true);
+  };
+
+  const addEvent = () => {
+    if (!form.name.trim()) return;
+    setEvents([...events, { day: selDay, ...form }]);
+    setShowAdd(false);
+  };
+
+  const typeColors = {Birthday:'#c97c5d', Special:'#4A9B6F', Health:'#9b72cf', Reminder:'#5a7a9e'};
+
   return (
     <div>
+      {/* Add event modal */}
+      {showAdd && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setShowAdd(false)}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:300,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:16,color:'#1A2E1F'}}>
+              Add Event · {mname.split(' ')[0]} {selDay}
+            </div>
+            <input
+              placeholder="Event name"
+              value={form.name}
+              onChange={e=>setForm({...form,name:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,
+                fontSize:13,marginBottom:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}
+            />
+            <div style={{display:'flex',gap:8,marginBottom:16}}>
+              {['Birthday','Special','Health','Reminder'].map(t=>(
+                <div key={t} onClick={()=>setForm({...form,type:t,color:typeColors[t]})}
+                  style={{padding:'5px 10px',borderRadius:20,fontSize:10,cursor:'pointer',
+                    background:form.type===t?typeColors[t]+'20':'#F7F9F7',
+                    border:`1px solid ${form.type===t?typeColors[t]:'#E2EDE5'}`,
+                    color:form.type===t?typeColors[t]:'#8AAD95'}}>
+                  {t}
+                </div>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>setShowAdd(false)}
+                style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #E2EDE5',
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>
+                Cancel
+              </div>
+              <div onClick={addEvent}
+                style={{flex:1,padding:'10px',borderRadius:12,background:'#2A6E3F',
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>
+                Add ✓
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="cal-hdr">
         <div className="cal-month">{mname}</div>
         <div className="cal-nav">
@@ -834,24 +906,43 @@ const Cal = () => {
       </div>
       <div className="cal-grid">
         {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d=><div key={d} className="cal-dh">{d}</div>)}
-        {days.map((d,i)=>(
-          <div key={i} className={`cal-day ${!d?'dim':''} ${d===4?'today':''} ${bdays.includes(d)?'has-dot bday':''} ${periods.includes(d)?'has-dot period':''} ${events.includes(d)&&!bdays.includes(d)&&!periods.includes(d)?'has-dot':''}`}>
-            {d}
-          </div>
-        ))}
+        {days.map((d,i)=>{
+          const de = dayEvents(d);
+          return (
+            <div key={i}
+              className={`cal-day ${!d?'dim':''} ${isToday(d)?'today':''}`}
+              onClick={()=>handleDayClick(d)}
+              style={{cursor:d?'pointer':'default', position:'relative'}}>
+              {d}
+              {de.length > 0 && (
+                <div style={{display:'flex',gap:2,position:'absolute',bottom:3,justifyContent:'center',width:'100%'}}>
+                  {de.slice(0,3).map((e,j)=>(
+                    <div key={j} style={{width:4,height:4,borderRadius:'50%',background:e.color}}/>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
       <div style={{marginTop:14}}>
-        <div className="card-label"><span>🎂</span>Upcoming Dates</div>
-        {[
-          {name:"Mom's Birthday", date:'Mar 15', color:'#c97c5d', type:'Birthday'},
-          {name:'Anniversary',    date:'Mar 18', color:C.kongQue,  type:'Special'},
-          {name:"Friend Lily's Birthday", date:'Mar 22', color:'#c97c5d', type:'Birthday'},
-          {name:'Period Expected', date:'Mar 10', color:'#9b72cf', type:'Health'},
-        ].map((e,i)=>(
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div className="card-label" style={{marginBottom:0}}><span>🎂</span>Upcoming Dates</div>
+          <div onClick={()=>{setSelDay(1);setShowAdd(true);}}
+            style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500}}>+ Add Event</div>
+        </div>
+        {events.sort((a,b)=>a.day-b.day).map((e,i)=>(
           <div key={i} className="evt">
             <div className="evt-dot" style={{background:e.color}}/>
-            <div style={{flex:1}}><div className="evt-name">{e.name}</div><div className="evt-date">{e.date}</div></div>
-            <div className="badge" style={{background:e.color+'20',color:e.color,border:`1px solid ${e.color}40`}}>{e.type}</div>
+            <div style={{flex:1}}>
+              <div className="evt-name">{e.name}</div>
+              <div className="evt-date">{mname.split(' ')[0]} {e.day}</div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <div className="badge" style={{background:e.color+'20',color:e.color,border:`1px solid ${e.color}40`}}>{e.type}</div>
+              <div onClick={()=>setEvents(events.filter((_,j)=>j!==i))}
+                style={{fontSize:14,color:'#8AAD95',cursor:'pointer',padding:'0 4px'}}>×</div>
+            </div>
           </div>
         ))}
       </div>
@@ -861,33 +952,112 @@ const Cal = () => {
 
 // =================== PERIOD ===================
 const Period = () => {
-  const day=14, total=28, pct=(day/total)*100;
+  const [editing, setEditing] = useState(false);
+  const [cycleLen, setCycleLen] = useState(28);
+  const [lastStart, setLastStart] = useState('2026-02-18');
+  const [flowDays, setFlowDays] = useState(5);
+
+  const today = new Date();
+  const last = new Date(lastStart);
+  const daysSince = Math.floor((today - last) / 86400000);
+  const currentDay = (daysSince % cycleLen) + 1;
+  const pct = (currentDay / cycleLen) * 100;
+
+  const nextPeriod = new Date(last);
+  nextPeriod.setDate(nextPeriod.getDate() + Math.ceil(daysSince / cycleLen) * cycleLen);
+  const daysUntil = Math.floor((nextPeriod - today) / 86400000);
+
+  const getPhase = () => {
+    if (currentDay <= flowDays) return {name:'Menstrual', color:'#c97c5d'};
+    if (currentDay <= 13) return {name:'Follicular', color:'#d4956a'};
+    if (currentDay <= 16) return {name:'Ovulation', color:'#4A9B6F'};
+    return {name:'Luteal', color:'#9b72cf'};
+  };
+  const phase = getPhase();
+
+  const fertileStart = 11, fertileEnd = 16;
+
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',marginBottom:7}}>
-        <span style={{fontSize:11,color:C.textMuted}}>Day {day} of {total}</span>
-        <span style={{fontSize:11,color:'#9b72cf',fontWeight:500}}>Ovulation Phase</span>
+      {editing && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setEditing(false)}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:300,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:20,color:'#1A2E1F'}}>
+              Edit Cycle Settings
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:'#8AAD95',marginBottom:6}}>Cycle Length (days)</div>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div onClick={()=>setCycleLen(Math.max(21,cycleLen-1))}
+                  style={{width:32,height:32,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:18}}>−</div>
+                <div style={{fontSize:22,fontFamily:"'Cormorant Garamond',serif",fontWeight:300,minWidth:40,textAlign:'center'}}>{cycleLen}</div>
+                <div onClick={()=>setCycleLen(Math.min(40,cycleLen+1))}
+                  style={{width:32,height:32,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:18}}>+</div>
+              </div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:'#8AAD95',marginBottom:6}}>Flow Duration (days)</div>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div onClick={()=>setFlowDays(Math.max(2,flowDays-1))}
+                  style={{width:32,height:32,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:18}}>−</div>
+                <div style={{fontSize:22,fontFamily:"'Cormorant Garamond',serif",fontWeight:300,minWidth:40,textAlign:'center'}}>{flowDays}</div>
+                <div onClick={()=>setFlowDays(Math.min(10,flowDays+1))}
+                  style={{width:32,height:32,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:18}}>+</div>
+              </div>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,color:'#8AAD95',marginBottom:6}}>Last Period Start Date</div>
+              <input type="date" value={lastStart} onChange={e=>setLastStart(e.target.value)}
+                style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,
+                  fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            </div>
+            <div onClick={()=>setEditing(false)}
+              style={{padding:'11px',borderRadius:12,background:'#2A6E3F',
+                textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>
+              Save Changes ✓
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:7}}>
+        <span style={{fontSize:11,color:C.textMuted}}>Day {currentDay} of {cycleLen}</span>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:11,color:phase.color,fontWeight:500}}>{phase.name} Phase</span>
+          <div onClick={()=>setEditing(true)}
+            style={{fontSize:10,color:'#4A9B6F',cursor:'pointer',padding:'3px 8px',
+              border:'1px solid #A8D5B5',borderRadius:20,background:'#F0F5F1'}}>Edit</div>
+        </div>
       </div>
-      <div className="cycle-bar"><div className="cycle-fill" style={{width:`${pct}%`}}/></div>
+      <div className="cycle-bar"><div className="cycle-fill" style={{width:`${pct}%`,background:`linear-gradient(90deg,${phase.color},${phase.color}99)`}}/></div>
       <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:14}}>
         {[
-          {name:'Menstrual',color:'#c97c5d'},{name:'Follicular',color:'#d4956a'},
-          {name:'Ovulation',color:C.kongQue,current:true},{name:'Luteal',color:'#9b72cf'},
+          {name:'Menstrual',color:'#c97c5d',active:currentDay<=flowDays},
+          {name:'Follicular',color:'#d4956a',active:currentDay>flowDays&&currentDay<=13},
+          {name:'Ovulation',color:'#4A9B6F',active:currentDay>13&&currentDay<=16},
+          {name:'Luteal',color:'#9b72cf',active:currentDay>16},
         ].map((p,i)=>(
-          <div key={i} className="phase" style={{color:p.color,borderColor:p.color+(p.current?'':'50'),background:p.current?p.color+'20':'transparent'}}>
-            {p.current&&<span style={{width:5,height:5,borderRadius:'50%',background:p.color,display:'inline-block'}}/>}
+          <div key={i} className="phase" style={{color:p.color,borderColor:p.color+(p.active?'':'50'),background:p.active?p.color+'20':'transparent'}}>
+            {p.active&&<span style={{width:5,height:5,borderRadius:'50%',background:p.color,display:'inline-block',marginRight:4}}/>}
             {p.name}
           </div>
         ))}
       </div>
       <div style={{background:'#F0F5F1',borderRadius:10,padding:'11px 13px',marginBottom:12}}>
         <div style={{fontSize:10,color:C.textMuted,marginBottom:4}}>💊 Next period expected</div>
-        <div style={{fontSize:15,fontFamily:"'Cormorant Garamond',serif",fontWeight:300}}>April 1, 2026 <span style={{fontSize:11,color:C.textMuted}}>· in 14 days</span></div>
+        <div style={{fontSize:15,fontFamily:"'Cormorant Garamond',serif",fontWeight:300}}>
+          {nextPeriod.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}
+          <span style={{fontSize:11,color:C.textMuted}}> · in {daysUntil} days</span>
+        </div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
         {[
-          {l:'Avg Cycle',v:'28 days'},{l:'Last Period',v:'Feb 18'},
-          {l:'Flow Duration',v:'5 days'},{l:'Fertile Window',v:'Mar 12–17'},
+          {l:'Avg Cycle',v:`${cycleLen} days`},
+          {l:'Last Period',v:new Date(lastStart).toLocaleDateString('en-US',{month:'short',day:'numeric'})},
+          {l:'Flow Duration',v:`${flowDays} days`},
+          {l:'Fertile Window',v:`Day ${fertileStart}–${fertileEnd}`},
         ].map((s,i)=>(
           <div key={i} className="period-stat">
             <div className="ps-label">{s.l}</div>
@@ -1150,6 +1320,13 @@ const Journal = () => {
 const Schedule = () => {
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newItem, setNewItem] = useState({title:'', time:'09:00', cat:'Work', meta:''});
+
+  const CATS = {
+    Fitness:{color:'#53976F'}, Habit:{color:'#007D62'}, Work:{color:'#5a7a9e'},
+    Life:{color:'#9e7a5a'}, Reading:{color:'#6a5a9e'}, People:{color:'#c97c5d'},
+  };
 
   const DEFAULT_ITEMS = [
     { title: 'Morning Run 5km', time: '07:00', meta: 'Fitness · 30 min', cat: 'Fitness', cat_color: '#53976F', done: false },
@@ -1195,8 +1372,60 @@ const Schedule = () => {
 
   const doneCount = items.filter(x => x.done).length;
 
+  const addItem = async () => {
+    if (!newItem.title.trim()) return;
+    const cat_color = CATS[newItem.cat]?.color || '#4A9B6F';
+    const item = { ...newItem, cat_color, done: false, user_id: 'nikki', date: today() };
+    const { data } = await supabase.from('schedule_items').insert(item).select().single();
+    if (data) setItems([...items, data].sort((a,b) => a.time.localeCompare(b.time)));
+    setShowAdd(false);
+    setNewItem({title:'', time:'09:00', cat:'Work', meta:''});
+  };
+
   return (
     <div>
+      {showAdd && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setShowAdd(false)}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:310,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:18,color:'#1A2E1F'}}>New Event</div>
+            <input placeholder="Title *" value={newItem.title}
+              onChange={e=>setNewItem({...newItem,title:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,
+                fontSize:13,marginBottom:10,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{display:'flex',gap:10,marginBottom:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'#8AAD95',marginBottom:4}}>Time</div>
+                <input type="time" value={newItem.time}
+                  onChange={e=>setNewItem({...newItem,time:e.target.value})}
+                  style={{width:'100%',padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,
+                    fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'#8AAD95',marginBottom:4}}>Category</div>
+                <select value={newItem.cat} onChange={e=>setNewItem({...newItem,cat:e.target.value})}
+                  style={{width:'100%',padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,
+                    fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}>
+                  {Object.keys(CATS).map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <input placeholder="Note (optional)" value={newItem.meta}
+              onChange={e=>setNewItem({...newItem,meta:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,
+                fontSize:13,marginBottom:16,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>setShowAdd(false)}
+                style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #E2EDE5',
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>Cancel</div>
+              <div onClick={addItem}
+                style={{flex:1,padding:'10px',borderRadius:12,background:'#2A6E3F',
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>Add ✓</div>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18,
         padding: '12px 16px', background: '#F0F5F1', borderRadius: 12,
         border: `1px solid ${C.guanLv}30` }}>
@@ -1232,7 +1461,7 @@ const Schedule = () => {
             </div>
           </div>
         ))}
-        <div className="add-sched-btn">
+        <div className="add-sched-btn" onClick={()=>setShowAdd(true)}>
           <span style={{ fontSize: 16 }}>＋</span> Add Event
         </div>
       </div>
