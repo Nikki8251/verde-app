@@ -1360,6 +1360,9 @@ const Reading = () => {
           </div>
         ))}
         <div style={{textAlign:'center',marginTop:8}}>
+          <div style={{padding:'10px 14px',background:'#F7F9F7',border:'1px solid #E2EDE5',borderRadius:12,marginBottom:10,fontSize:11,color:'#8AAD95',lineHeight:1.6}}>
+            📱 Progress below is manually tracked. Tap "Open WeChat Books" to sync your real reading progress, then update here.
+          </div>
           <div className="open-btn" onClick={openWeChat}
             style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
             📱 Open WeChat Books
@@ -2231,14 +2234,55 @@ const Speak = () => {
 };
 
 // =================== DASHBOARD ===================
-const Dashboard = ({go}) => (
+const QUOTES = [
+  { text: "The best time to plant a tree was ten years ago. The second best time is now.", by: "Chinese Proverb" },
+  { text: "You don't have to be great to start, but you have to start to be great.", by: "Zig Ziglar" },
+  { text: "Do something today that your future self will thank you for.", by: "Sean Patrick Flanery" },
+  { text: "Small steps every day lead to big changes over time.", by: "Daily Reflection · Verdé" },
+  { text: "The secret of getting ahead is getting started.", by: "Mark Twain" },
+  { text: "You are the average of the five people you spend the most time with.", by: "Jim Rohn" },
+  { text: "Discipline is choosing between what you want now and what you want most.", by: "Augusta F. Kantra" },
+];
+
+const Dashboard = ({go}) => {
+  const todayIdx = new Date().getDay(); // rotate quote by day of week
+  const quote = QUOTES[new Date().getDate() % QUOTES.length];
+
+  const [todos, setTodos] = useState([
+    {id:1, text:'Morning yoga 🧘', done:false},
+    {id:2, text:'Read 20 pages 📖', done:false},
+    {id:3, text:'Call Mom 📱', done:false},
+    {id:4, text:'Journal entry ✍️', done:true},
+  ]);
+  const [newTodo, setNewTodo] = useState('');
+  const [addingTodo, setAddingTodo] = useState(false);
+
+  const toggleTodo = (id) => setTodos(t => t.map(x => x.id===id ? {...x, done:!x.done} : x));
+  const addTodo = () => {
+    if (!newTodo.trim()) return;
+    setTodos(t => [...t, {id:Date.now(), text:newTodo.trim(), done:false}]);
+    setNewTodo('');
+    setAddingTodo(false);
+  };
+  const deleteTodo = (id) => setTodos(t => t.filter(x => x.id!==id));
+
+  const upcomingBirthdays = [
+    {name:'Mom', emoji:'👩', date:'Mar 15', daysAway:6, color:'#c97c5d'},
+    {name:'Lily', emoji:'👧', date:'Mar 22', daysAway:13, color:'#9b72cf'},
+  ];
+
+  const doneCount = todos.filter(x=>x.done).length;
+
+  return (
   <div className="fu">
+    {/* Quote */}
     <div className="quote-card">
       <div className="quote-mark">"</div>
-      <div className="quote-text">The best time to plant a tree was ten years ago. The second best time is now.</div>
-      <div className="quote-by">— Daily Reflection · Verdé</div>
+      <div className="quote-text">{quote.text}</div>
+      <div className="quote-by">— {quote.by}</div>
     </div>
 
+    {/* Stats row */}
     <div className="g3 fu d1" style={{marginBottom:22}}>
       {[
         {l:'Habit Streak',v:'12',s:'days in a row',e:'🔥'},
@@ -2256,24 +2300,106 @@ const Dashboard = ({go}) => (
 
     <div className="g-main fu d2">
       <div>
+        {/* Today's To-Do */}
         <div className="sec">
-          <div className="sec-hdr"><div className="sec-title">Today's Schedule</div><div className="sec-action" onClick={()=>go('schedule')}>Details →</div></div>
+          <div className="sec-hdr">
+            <div className="sec-title">Today's To-Do</div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <div style={{fontSize:10,color:'#4A9B6F'}}>{doneCount}/{todos.length} done</div>
+              <div className="sec-action" onClick={()=>setAddingTodo(true)}>+ Add</div>
+            </div>
+          </div>
+          <div className="card">
+            {/* Progress bar */}
+            <div style={{height:3,background:'#E2EDE5',borderRadius:2,marginBottom:14,overflow:'hidden'}}>
+              <div style={{height:'100%',background:'#2A6E3F',borderRadius:2,
+                width:`${todos.length?((doneCount/todos.length)*100):0}%`,transition:'width 0.4s'}}/>
+            </div>
+            {todos.map(todo=>(
+              <div key={todo.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',
+                borderBottom:'1px solid #F0F5F1'}}>
+                <div onClick={()=>toggleTodo(todo.id)}
+                  style={{width:20,height:20,borderRadius:6,flexShrink:0,cursor:'pointer',
+                    border:`2px solid ${todo.done?'#2A6E3F':'#E2EDE5'}`,
+                    background:todo.done?'#2A6E3F':'transparent',
+                    display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  {todo.done&&<span style={{color:'white',fontSize:10}}>✓</span>}
+                </div>
+                <div style={{flex:1,fontSize:13,color:todo.done?'#8AAD95':'#1A2E1F',
+                  textDecoration:todo.done?'line-through':'none'}}>{todo.text}</div>
+                <div onClick={()=>deleteTodo(todo.id)}
+                  style={{fontSize:15,color:'#E2EDE5',cursor:'pointer',padding:'0 4px'}}
+                  onMouseEnter={e=>e.target.style.color='#8AAD95'}
+                  onMouseLeave={e=>e.target.style.color='#E2EDE5'}>×</div>
+              </div>
+            ))}
+            {addingTodo && (
+              <div style={{display:'flex',gap:8,marginTop:10}}>
+                <input autoFocus placeholder="Add a task..." value={newTodo}
+                  onChange={e=>setNewTodo(e.target.value)}
+                  onKeyDown={e=>{if(e.key==='Enter')addTodo();if(e.key==='Escape')setAddingTodo(false);}}
+                  style={{flex:1,padding:'8px 12px',border:'1px solid #4A9B6F',borderRadius:10,
+                    fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+                <div onClick={addTodo}
+                  style={{padding:'8px 14px',borderRadius:10,background:'#2A6E3F',
+                    color:'#fff',fontSize:13,cursor:'pointer',fontWeight:500}}>✓</div>
+              </div>
+            )}
+            {todos.length===0&&<div style={{textAlign:'center',color:'#8AAD95',fontSize:12,padding:'12px 0'}}>All done! 🌿</div>}
+          </div>
+        </div>
+
+        {/* Schedule */}
+        <div className="sec">
+          <div className="sec-hdr">
+            <div className="sec-title">Today's Schedule</div>
+            <div className="sec-action" onClick={()=>go('schedule')}>Details →</div>
+          </div>
           <div className="card"><Schedule/></div>
         </div>
+
         <div className="sec">
           <div className="sec-hdr"><div className="sec-title">Calendar · March 2026</div><div className="sec-action" onClick={()=>go('calendar')}>View All →</div></div>
           <div className="card"><Cal/></div>
         </div>
-        <div className="sec">
-          <div className="sec-hdr"><div className="sec-title">Today's Workout</div><div className="sec-action" onClick={()=>go('fitness')}>Details →</div></div>
-          <div className="card"><Fitness/></div>
-        </div>
       </div>
+
       <div>
+        {/* Upcoming Birthdays */}
+        <div className="sec">
+          <div className="sec-hdr">
+            <div className="sec-title">🎂 Birthdays Coming Up</div>
+          </div>
+          <div className="card" style={{padding:'14px 16px'}}>
+            {upcomingBirthdays.map((b,i)=>(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:12,
+                padding:'9px 0',borderBottom:i<upcomingBirthdays.length-1?'1px solid #F0F5F1':'none'}}>
+                <div style={{width:36,height:36,borderRadius:'50%',background:b.color+'20',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>
+                  {b.emoji}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:'#1A2E1F',fontWeight:500}}>{b.name}</div>
+                  <div style={{fontSize:10,color:'#8AAD95',marginTop:1}}>{b.date}</div>
+                </div>
+                <div style={{padding:'4px 10px',borderRadius:20,fontSize:10,fontWeight:500,
+                  background:b.color+'15',color:b.color,border:`1px solid ${b.color}30`}}>
+                  in {b.daysAway}d 🎁
+                </div>
+              </div>
+            ))}
+            <div onClick={()=>go('calendar')}
+              style={{marginTop:10,textAlign:'center',fontSize:11,color:'#4A9B6F',cursor:'pointer'}}>
+              Manage all events →
+            </div>
+          </div>
+        </div>
+
+        {/* Quick journal */}
         <div className="sec">
           <div className="sec-hdr"><div className="sec-title">Thoughts</div><div className="sec-action" onClick={()=>go('journal')}>More →</div></div>
           <div className="card">
-            <textarea className="journal-textarea" placeholder="What's on your mind…" style={{minHeight:80}} readOnly={false}/>
+            <textarea className="journal-textarea" placeholder="What's on your mind…" style={{minHeight:80}}/>
             <div style={{display:'flex',gap:5,marginTop:8,flexWrap:'wrap'}}>
               {['🌿','☀️','🌙','💭','🔥','✨'].map(m=>(
                 <div key={m} className="mood-btn">{m}</div>
@@ -2282,10 +2408,14 @@ const Dashboard = ({go}) => (
             </div>
           </div>
         </div>
+
+        {/* Cycle tracker */}
         <div className="sec">
           <div className="sec-hdr"><div className="sec-title">Cycle Tracker</div><div className="badge" style={{background:'#9b72cf20',color:'#9b72cf',border:'1px solid #9b72cf40'}}>Day 14</div></div>
           <div className="card"><Period/></div>
         </div>
+
+        {/* My People */}
         <div className="sec">
           <div className="sec-hdr"><div className="sec-title">My People</div><div className="sec-action">Manage →</div></div>
           <div className="card">
@@ -2300,6 +2430,8 @@ const Dashboard = ({go}) => (
             </div>
           </div>
         </div>
+
+        {/* Next trip */}
         <div className="sec">
           <div className="sec-hdr"><div className="sec-title">Next Adventure</div><div className="sec-action" onClick={()=>go('travel')}>All Trips →</div></div>
           <div className="card">
@@ -2307,10 +2439,10 @@ const Dashboard = ({go}) => (
               <span style={{fontSize:32}}>⛰️</span>
               <div>
                 <div style={{fontSize:15,fontWeight:300,fontFamily:"'Cormorant Garamond',serif"}}>Zhangjiajie</div>
-                <div style={{fontSize:10,color:C.textMuted,marginTop:3}}>Apr 12–18 · Nature Trip</div>
+                <div style={{fontSize:10,color:'#8AAD95',marginTop:3}}>Apr 12–18 · Nature Trip</div>
                 <div style={{marginTop:8,display:'flex',gap:6}}>
-                  <span className="badge" style={{background:C.guanLv+'30',color:C.siLv,border:`1px solid ${C.guanLv}50`}}>in 39 days</span>
-                  <span className="badge" style={{background:C.kongQue+'20',color:C.kongQue,border:`1px solid ${C.kongQue}40`}}>Planning</span>
+                  <span className="badge" style={{background:'#4A9B6F30',color:'#4A9B6F',border:'1px solid #4A9B6F50'}}>in 39 days</span>
+                  <span className="badge" style={{background:'#2A6E3F20',color:'#2A6E3F',border:'1px solid #2A6E3F40'}}>Planning</span>
                 </div>
               </div>
             </div>
@@ -2319,7 +2451,8 @@ const Dashboard = ({go}) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // =================== SPLASH ===================
 const Splash = ({onDone}) => {
@@ -2374,34 +2507,44 @@ const titles = {
 export default function App() {
   const [splash, setSplash] = useState(true);
   const [view, setView] = useState('home');
+  const [showMore, setShowMore] = useState(false);
 
-  // Ensure proper mobile viewport
   useEffect(() => {
     const meta = document.querySelector('meta[name="viewport"]');
-    if (meta) {
-      meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
-    }
+    if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
   }, []);
 
-  // Mobile nav shows 5 most important items
   const MOBILE_NAV = [
     {id:'home',    icon:'⊞',  label:'Home'},
     {id:'schedule',icon:'◷',  label:'Schedule'},
     {id:'journal', icon:'✍️', label:'Journal'},
     {id:'speak',   icon:'🎙', label:'Speak'},
-    {id:'more',    icon:'···', label:'More'},
+    {id:'more',    icon:'☰',  label:'Menu'},
   ];
+
+  const MORE_MENU = [
+    {id:'calendar', icon:'📅', label:'Calendar'},
+    {id:'fitness',  icon:'💪', label:'Fitness'},
+    {id:'reading',  icon:'📚', label:'Reading'},
+    {id:'travel',   icon:'✈️', label:'Travel'},
+    {id:'home',     icon:'⊞',  label:'Home'},
+    {id:'schedule', icon:'◷',  label:'Schedule'},
+    {id:'journal',  icon:'✍️', label:'Journal'},
+    {id:'speak',    icon:'🎙', label:'Speak'},
+  ];
+
+  const goTo = (id) => { setView(id); setShowMore(false); };
 
   const renderPage = () => {
     switch(view) {
-      case 'home': return <Dashboard go={setView}/>;
+      case 'home': return <Dashboard go={goTo}/>;
       case 'schedule': return <div className="card fu"><div className="card-label"><span>◷</span>Today's Schedule</div><Schedule/></div>;
-      case 'journal': return <div className="fu"><Journal/></div>;      case 'calendar': return <div className="g2 fu"><div className="card"><div className="card-label"><span>📅</span>Calendar</div><Cal/></div><div className="card"><div className="card-label"><span>🌸</span>Cycle Tracker</div><Period/></div></div>;
+      case 'journal': return <div className="fu"><Journal/></div>;
+      case 'calendar': return <div className="g2 fu"><div className="card"><div className="card-label"><span>📅</span>Calendar</div><Cal/></div><div className="card"><div className="card-label"><span>🌸</span>Cycle Tracker</div><Period/></div></div>;
       case 'fitness': return <div className="card fu"><div className="card-label"><span>🏋️</span>Today's Workout</div><Fitness/></div>;
       case 'reading': return <div className="card fu"><Reading/></div>;
       case 'speak': return <div className="fu"><Speak/></div>;
       case 'travel': return <div className="card fu"><div className="card-label"><span>✈️</span>Travel & Camping Plans</div><Travel/></div>;
-      case 'finance': return null;
       default: return null;
     }
   };
@@ -2410,6 +2553,35 @@ export default function App() {
     <>
       <style>{css}</style>
       {splash && <Splash onDone={()=>setSplash(false)}/>}
+
+      {/* More Menu Drawer (mobile) */}
+      {showMore && (
+        <div style={{position:'fixed',inset:0,zIndex:200,display:'flex',flexDirection:'column',justifyContent:'flex-end'}}
+          onClick={()=>setShowMore(false)}>
+          <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.4)',backdropFilter:'blur(4px)'}}/>
+          <div style={{position:'relative',background:'#FFFFFF',borderRadius:'24px 24px 0 0',
+            padding:'20px 20px 40px',boxShadow:'0 -8px 40px rgba(42,110,63,0.15)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{width:36,height:4,background:'#E2EDE5',borderRadius:2,margin:'0 auto 20px'}}/>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:17,color:'#1A2E1F',marginBottom:16,textAlign:'center',letterSpacing:1}}>
+              All Sections
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+              {MORE_MENU.map(n=>(
+                <div key={n.id} onClick={()=>goTo(n.id)}
+                  style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,
+                    padding:'14px 8px',borderRadius:16,cursor:'pointer',
+                    background:view===n.id?'#2A6E3F15':'#F7F9F7',
+                    border:`1px solid ${view===n.id?'#4A9B6F':'#E2EDE5'}`}}>
+                  <div style={{fontSize:22}}>{n.icon}</div>
+                  <div style={{fontSize:10,color:view===n.id?'#2A6E3F':'#8AAD95',fontWeight:view===n.id?600:400}}>{n.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="app" style={{opacity:splash?0:1,transition:'opacity 0.6s ease 0.2s'}}>
         <nav className="sidebar">
           <div className="sb-logo" onClick={()=>setView('home')}>
@@ -2437,20 +2609,9 @@ export default function App() {
         {/* Mobile bottom navigation */}
         <nav className="bottom-nav">
           {MOBILE_NAV.map(n => (
-            <div
-              key={n.id}
-              className={`bn-item ${view===n.id ? 'active' : ''}`}
-              onClick={() => {
-                if (n.id === 'more') {
-                  // cycle through remaining pages
-                  const extras = ['calendar','fitness','reading','travel'];
-                  const cur = extras.indexOf(view);
-                  setView(extras[(cur + 1) % extras.length]);
-                } else {
-                  setView(n.id);
-                }
-              }}
-            >
+            <div key={n.id}
+              className={`bn-item ${(n.id!=='more'&&view===n.id)||(n.id==='more'&&showMore) ? 'active' : ''}`}
+              onClick={() => n.id==='more' ? setShowMore(s=>!s) : goTo(n.id)}>
               <div className="bn-icon">{n.icon}</div>
               <div className="bn-label">{n.label}</div>
             </div>
