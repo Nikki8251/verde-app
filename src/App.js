@@ -1891,44 +1891,95 @@ const Speak = () => {
   const [seconds, setSeconds] = useState(0);
   const [activeTed, setActiveTed] = useState(null);
   const [recordings, setRecordings] = useState([
-    { name: 'Self-intro practice', dur: '1:32', bars: [4,8,14,20,28,22,16,10,6,12,18,24,20,14,8,4,6,10,16,20,14,8] },
-    { name: 'Morning reflection', dur: '0:47', bars: [6,12,8,18,24,16,10,6,8,14,20,16,10,6,4,8,12,16,12,8,4,6] },
-    { name: 'TED shadow: Brené Brown', dur: '2:15', bars: [8,14,20,26,30,24,18,12,8,10,16,22,28,24,18,12,8,12,18,22,16,10] },
+    { id:1, name: 'Self-intro practice', dur: '1:32', date:'Mar 9', bars: [4,8,14,20,28,22,16,10,6,12,18,24,20,14,8,4,6,10,16,20,14,8] },
+    { id:2, name: 'Morning reflection', dur: '0:47', date:'Mar 8', bars: [6,12,8,18,24,16,10,6,8,14,20,16,10,6,4,8,12,16,12,8,4,6] },
+    { id:3, name: 'TED shadow: Brené Brown', dur: '2:15', date:'Mar 6', bars: [8,14,20,26,30,24,18,12,8,10,16,22,28,24,18,12,8,12,18,22,16,10] },
   ]);
+  const [editRecId, setEditRecId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [activePromptIdx, setActivePromptIdx] = useState(0);
+  const [timerRef] = useState({interval: null});
 
   const teds = [
-    { title: 'The Power of Vulnerability', speaker: 'Brené Brown', duration: '20 min', tags: ['Authenticity','Connection'], color: '#8B4513', emoji: '💭', level: 'Intermediate' },
-    { title: 'Your Body Language May Shape Who You Are', speaker: 'Amy Cuddy', duration: '21 min', tags: ['Confidence','Presence'], color: '#2c5f7a', emoji: '🧠', level: 'Beginner' },
-    { title: 'The Surprising Science of Happiness', speaker: 'Dan Gilbert', duration: '21 min', tags: ['Psychology','Joy'], color: '#5a4a8a', emoji: '✨', level: 'Beginner' },
-    { title: 'How Great Leaders Inspire Action', speaker: 'Simon Sinek', duration: '18 min', tags: ['Leadership','Purpose'], color: '#2d6a4f', emoji: '🎯', level: 'Intermediate' },
-    { title: 'Do Schools Kill Creativity?', speaker: 'Ken Robinson', duration: '19 min', tags: ['Education','Creativity'], color: '#7a5a2d', emoji: '🎨', level: 'Advanced' },
-    { title: 'Inside the Mind of a Master Procrastinator', speaker: 'Tim Urban', duration: '14 min', tags: ['Humor','Productivity'], color: '#3d5a8a', emoji: '🦍', level: 'Beginner' },
+    { title:'The Power of Vulnerability', speaker:'Brené Brown', duration:'20 min', tags:['Authenticity','Connection'], color:'#8B4513', emoji:'💭', level:'Intermediate',
+      url:'https://www.ted.com/talks/brene_brown_the_power_of_vulnerability' },
+    { title:'Your Body Language May Shape Who You Are', speaker:'Amy Cuddy', duration:'21 min', tags:['Confidence','Presence'], color:'#2c5f7a', emoji:'🧠', level:'Beginner',
+      url:'https://www.ted.com/talks/amy_cuddy_your_body_language_may_shape_who_you_are' },
+    { title:'The Surprising Science of Happiness', speaker:'Dan Gilbert', duration:'21 min', tags:['Psychology','Joy'], color:'#5a4a8a', emoji:'✨', level:'Beginner',
+      url:'https://www.ted.com/talks/dan_gilbert_asks_why_are_we_happy' },
+    { title:'How Great Leaders Inspire Action', speaker:'Simon Sinek', duration:'18 min', tags:['Leadership','Purpose'], color:'#2d6a4f', emoji:'🎯', level:'Intermediate',
+      url:'https://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action' },
+    { title:'Do Schools Kill Creativity?', speaker:'Ken Robinson', duration:'19 min', tags:['Education','Creativity'], color:'#7a5a2d', emoji:'🎨', level:'Advanced',
+      url:'https://www.ted.com/talks/sir_ken_robinson_do_schools_kill_creativity' },
+    { title:'Inside the Mind of a Master Procrastinator', speaker:'Tim Urban', duration:'14 min', tags:['Humor','Productivity'], color:'#3d5a8a', emoji:'🦍', level:'Beginner',
+      url:'https://www.ted.com/talks/tim_urban_inside_the_mind_of_a_master_procrastinator' },
   ];
 
-  const prompts = [
-    { label: 'Today\'s Prompt', text: 'Describe a moment that completely changed how you see the world. Speak for 2 minutes.', hint: 'Try to use vivid imagery and a clear turning point.' },
-    { label: 'Shadowing Exercise', text: 'Listen to Amy Cuddy\'s opening 30 seconds. Then record yourself mimicking her pace and rhythm.', hint: 'Focus on pauses and vocal variety.' },
-    { label: 'Storytelling', text: 'Tell a story about a person who influenced you — with a beginning, conflict, and resolution.', hint: 'Use the "what happened → what it meant" structure.' },
-  ];
+  // Material library — categorized prompts for expression practice
+  const materials = {
+    storytelling: [
+      { text:'Describe a moment that completely changed how you see the world. Speak for 2 minutes.', hint:'Use vivid imagery and a clear turning point.' },
+      { text:'Tell a story about a person who influenced you — with a beginning, conflict, and resolution.', hint:'Use the "what happened → what it meant" structure.' },
+      { text:'Recall a time you failed at something important. What did it teach you?', hint:'Vulnerability creates connection. Don\'t skip the hard part.' },
+      { text:'Describe a place that feels like home to you. Why does it feel that way?', hint:'Use all five senses to paint the scene.' },
+    ],
+    shadowing: [
+      { text:'Listen to Amy Cuddy\'s opening 30 seconds. Record yourself mimicking her pace and rhythm.', hint:'Focus on pauses and vocal variety, not just words.' },
+      { text:'Shadow Simon Sinek\'s "Start With Why" opening — match his calm, deliberate tone.', hint:'Slow down. Leaders don\'t rush.' },
+      { text:'Pick any 1-minute clip from a TED talk you love. Shadow it 3 times, improving each time.', hint:'Record all 3 attempts. Compare them.' },
+    ],
+    impromptu: [
+      { text:'You have 30 seconds to prepare, then speak for 2 minutes on: "What makes a good friend?"', hint:'Structure: Point → Reason → Example → Point again.' },
+      { text:'Impromptu: "If you could change one thing about how you grew up, what would it be?"', hint:'Be honest. Authenticity beats polish.' },
+      { text:'Speak for 90 seconds on something you changed your mind about recently.', hint:'Show your thinking process, not just the conclusion.' },
+      { text:'Describe your morning routine as if you\'re selling it to someone.', hint:'Use enthusiasm. Energy is contagious.' },
+    ],
+    debate: [
+      { text:'Argue FOR: "Social media does more good than harm." 2 minutes.', hint:'Pick your strongest 2 points. Don\'t scatter.' },
+      { text:'Argue AGAINST: "AI will make human creativity irrelevant."', hint:'Use specific examples. Abstract arguments lose.' },
+      { text:'Make the case for a habit or hobby most people underestimate.', hint:'Lead with the surprising benefit, not the obvious one.' },
+    ],
+  };
 
-  // Timer
-  useState(() => {
-    let interval;
-    if (recording) {
-      interval = setInterval(() => setSeconds(s => s + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  });
+  const catLabels = {storytelling:'📖 Storytelling', shadowing:'🎙 Shadowing', impromptu:'⚡ Impromptu', debate:'🗣 Debate'};
+  const [matCat, setMatCat] = useState('storytelling');
+  const [matIdx, setMatIdx] = useState(0);
+  const currentPrompt = materials[matCat][matIdx];
+
+  const shuffle = () => setMatIdx(Math.floor(Math.random() * materials[matCat].length));
+
+  // Recording timer using ref to avoid stale closure
+  const startTimer = () => {
+    timerRef.interval = setInterval(() => setSeconds(s => s + 1), 1000);
+  };
+  const stopTimer = () => {
+    clearInterval(timerRef.interval);
+  };
 
   const toggleRec = () => {
     if (recording) {
+      stopTimer();
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
       const dur = `${mins}:${secs.toString().padStart(2,'0')}`;
-      setRecordings([{ name: 'New recording', dur, bars: Array.from({length:22}, ()=>Math.floor(Math.random()*28)+4) }, ...recordings]);
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      setRecordings(prev => [
+        { id: Date.now(), name: `Recording ${dateStr}`, dur, date: dateStr,
+          bars: Array.from({length:22}, ()=>Math.floor(Math.random()*28)+4) },
+        ...prev
+      ]);
       setSeconds(0);
+    } else {
+      startTimer();
     }
     setRecording(r => !r);
+  };
+
+  const deleteRec = (id) => setRecordings(r => r.filter(x => x.id !== id));
+  const saveEditName = (id) => {
+    setRecordings(r => r.map(x => x.id === id ? {...x, name: editName} : x));
+    setEditRecId(null);
   };
 
   const fmt = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
@@ -1939,9 +1990,9 @@ const Speak = () => {
       {/* Stats */}
       <div className="speak-stats fu">
         {[
-          {v:'12', l:'Sessions'},
+          {v: recordings.length, l:'Recordings'},
           {v:'3.2h', l:'Practiced'},
-          {v:'8', l:'TED Watched'},
+          {v: teds.length, l:'TED Talks'},
           {v:'14d', l:'Streak'},
         ].map((s,i) => (
           <div key={i} className="speak-stat">
@@ -1955,14 +2006,14 @@ const Speak = () => {
       <div className="tabs fu">
         <div className={`tab ${tab==='ted'?'on':''}`} onClick={()=>setTab('ted')}>🎙 TED Talks</div>
         <div className={`tab ${tab==='record'?'on':''}`} onClick={()=>setTab('record')}>⏺ Voice Studio</div>
-        <div className={`tab ${tab==='prompts'?'on':''}`} onClick={()=>setTab('prompts')}>💡 Practice Prompts</div>
+        <div className={`tab ${tab==='materials'?'on':''}`} onClick={()=>setTab('materials')}>💡 Materials</div>
       </div>
 
-      {/* TED Talks */}
+      {/* ── TED Talks ── */}
       {tab === 'ted' && (
         <div className="fu">
           <div style={{fontSize:11,color:C.textMuted,marginBottom:14,letterSpacing:0.5}}>
-            Watch, shadow, and take notes. Learning expression starts with great speakers.
+            Click to expand · tap "Watch on TED" to open the real talk 🎬
           </div>
           {teds.map((t,i) => (
             <div key={i} className={`ted-item ${activeTed===i?'active':''}`} onClick={()=>setActiveTed(activeTed===i?null:i)}>
@@ -1977,38 +2028,49 @@ const Speak = () => {
                   <span className="ted-badge">TED</span>
                   <span className="ted-duration">⏱ {t.duration}</span>
                   {t.tags.map((tg,j) => <span key={j} className="ted-tag">{tg}</span>)}
-                  <span className="ted-tag" style={{color:C.siLv,borderColor:C.guanLv+'50',background:C.guanLv+'20'}}>{t.level}</span>
+                  <span className="ted-tag" style={{color:'#4A9B6F',borderColor:'#2A6E3F50',background:'#2A6E3F15'}}>{t.level}</span>
                 </div>
                 {activeTed===i && (
-                  <div style={{marginTop:10,padding:'10px 12px',background:'#F7F9F7',borderRadius:9}}>
-                    <div style={{height:4,background:'#F0F5F1',borderRadius:2,marginBottom:8,overflow:'hidden'}}>
-                      <div style={{width:'35%',height:'100%',background:`linear-gradient(90deg,${C.guanLv},${C.kongQue})`,borderRadius:2}}/>
+                  <div style={{marginTop:10,padding:'12px',background:'#F7F9F7',borderRadius:9}}>
+                    <div style={{height:4,background:'#E2EDE5',borderRadius:2,marginBottom:8,overflow:'hidden'}}>
+                      <div style={{width:'35%',height:'100%',background:'linear-gradient(90deg,#2A6E3F,#4A9B6F)',borderRadius:2}}/>
                     </div>
-                    <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:C.textFaint}}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#8AAD95',marginBottom:10}}>
                       <span>7:21</span><span>{t.duration}</span>
                     </div>
-                    <div style={{display:'flex',gap:8,marginTop:10}}>
-                      {['▶ Play','↩ Shadow','📝 Notes'].map((btn,j)=>(
-                        <div key={j} style={{padding:'5px 12px',borderRadius:20,background:j===0?C.guanLv:'#F0F5F1',
-                          border:`1px solid ${j===0?C.guanLv:C.guanLv+'40'}`,fontSize:11,cursor:'pointer',
-                          color:j===0?C.duanChang:C.textMuted,transition:'all 0.2s'}}>
-                          {btn}
-                        </div>
-                      ))}
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      <div onClick={()=>window.open(t.url,'_blank')}
+                        style={{padding:'6px 14px',borderRadius:20,background:'#e2231a',color:'#fff',fontSize:11,cursor:'pointer',fontWeight:500,display:'flex',alignItems:'center',gap:4}}>
+                        ▶ Watch on TED
+                      </div>
+                      <div onClick={()=>{setTab('record');}}
+                        style={{padding:'6px 14px',borderRadius:20,background:'#2A6E3F15',border:'1px solid #2A6E3F40',color:'#2A6E3F',fontSize:11,cursor:'pointer'}}>
+                        🎙 Shadow It
+                      </div>
+                      <div onClick={()=>{setTab('materials');setMatCat('shadowing');}}
+                        style={{padding:'6px 14px',borderRadius:20,background:'#F0F5F1',border:'1px solid #E2EDE5',color:'#8AAD95',fontSize:11,cursor:'pointer'}}>
+                        📝 Get Prompt
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
             </div>
           ))}
+          <div style={{textAlign:'center',marginTop:12}}>
+            <div onClick={()=>window.open('https://www.ted.com/talks','_blank')}
+              style={{display:'inline-flex',alignItems:'center',gap:6,padding:'9px 20px',borderRadius:20,
+                background:'#e2231a',color:'#fff',fontSize:12,cursor:'pointer',fontWeight:500}}>
+              🌐 Browse All TED Talks
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Voice Studio */}
+      {/* ── Voice Studio ── */}
       {tab === 'record' && (
         <div className="fu">
           <div className="recorder-wrap" style={{marginBottom:18}}>
-            {/* Visualizer */}
             <div className="rec-visualizer">
               {heights.map((h,i) => (
                 <div key={i} className={`rec-bar ${recording?'active':''}`}
@@ -2016,75 +2078,133 @@ const Speak = () => {
                     animationDelay: `${(i*0.05)%0.6}s`, animationDuration: `${0.4+(i%5)*0.1}s`}}/>
               ))}
             </div>
-
-            {/* Timer */}
             <div className="rec-timer">{fmt(seconds)}</div>
             <div className={`rec-status ${recording?'live':''}`}>{recording ? '● RECORDING' : 'ready to record'}</div>
-
-            {/* Controls */}
             <div className="rec-controls" style={{marginTop:16}}>
-              <div className="rec-btn-secondary" title="Rewind">⏮</div>
+              <div className="rec-btn-secondary">⏮</div>
               <button className={`rec-btn-main ${recording?'recording':'idle'}`} onClick={toggleRec}>
                 {recording ? '⏹' : '⏺'}
               </button>
-              <div className="rec-btn-secondary" title="Play back">▶</div>
+              <div className="rec-btn-secondary">▶</div>
             </div>
-
             <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:8}}>
               {['🎙 Mic','🔊 Speaker','⚙ Settings'].map((b,i)=>(
-                <div key={i} style={{fontSize:10,color:C.textFaint,cursor:'pointer',padding:'4px 10px',
-                  borderRadius:20,border:`1px solid ${C.guanLv}25`,background:'#F7F9F7'}}>{b}</div>
+                <div key={i} style={{fontSize:10,color:'#8AAD95',cursor:'pointer',padding:'4px 10px',
+                  borderRadius:20,border:'1px solid #E2EDE5',background:'#F7F9F7'}}>{b}</div>
               ))}
             </div>
           </div>
 
-          {/* Past recordings */}
+          {/* Recordings list */}
           <div className="sec-hdr">
-            <div className="sec-title" style={{fontSize:13}}>My Recordings</div>
-            <div className="sec-action">Manage →</div>
+            <div className="sec-title" style={{fontSize:13}}>My Recordings ({recordings.length})</div>
           </div>
-          {recordings.map((r,i) => (
-            <div key={i} className="rec-entry">
-              <div className="rec-play">▶</div>
-              <div className="rec-info">
-                <div className="rec-name">{r.name}</div>
-                <div className="rec-dur">{r.dur}</div>
+          {recordings.length === 0 && (
+            <div style={{textAlign:'center',color:'#8AAD95',fontSize:12,padding:'20px 0'}}>
+              No recordings yet — hit ⏺ to start 🎙
+            </div>
+          )}
+          {recordings.map((r) => (
+            <div key={r.id} className="rec-entry" style={{position:'relative'}}>
+              <div className="rec-play" style={{cursor:'pointer',background:'#2A6E3F',color:'white',borderRadius:'50%',
+                width:28,height:28,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:10}}>▶</div>
+              <div className="rec-info" style={{flex:1}}>
+                {editRecId === r.id ? (
+                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                    <input value={editName} onChange={e=>setEditName(e.target.value)}
+                      onKeyDown={e=>e.key==='Enter'&&saveEditName(r.id)}
+                      style={{flex:1,padding:'4px 8px',border:'1px solid #4A9B6F',borderRadius:8,fontSize:12,outline:'none'}}
+                      autoFocus/>
+                    <div onClick={()=>saveEditName(r.id)}
+                      style={{padding:'4px 10px',background:'#2A6E3F',color:'#fff',borderRadius:8,fontSize:11,cursor:'pointer'}}>✓</div>
+                  </div>
+                ) : (
+                  <div className="rec-name" style={{cursor:'pointer'}} onClick={()=>{setEditRecId(r.id);setEditName(r.name);}}>
+                    {r.name} <span style={{fontSize:9,color:'#A8D5B5'}}>✏️</span>
+                  </div>
+                )}
+                <div className="rec-dur">{r.dur} · {r.date}</div>
               </div>
               <div className="rec-wave">
                 {r.bars.map((h,j) => (
                   <div key={j} className="rec-wv" style={{height:h+'px'}}/>
                 ))}
               </div>
-              <div style={{fontSize:13,color:C.textFaint,cursor:'pointer',padding:'0 4px'}}>⋯</div>
+              <div onClick={()=>deleteRec(r.id)}
+                style={{fontSize:16,color:'#8AAD95',cursor:'pointer',padding:'0 6px',flexShrink:0}}
+                title="Delete">×</div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Practice Prompts */}
-      {tab === 'prompts' && (
+      {/* ── Materials Library ── */}
+      {tab === 'materials' && (
         <div className="fu">
-          <div style={{fontSize:11,color:C.textMuted,marginBottom:16,letterSpacing:0.5,lineHeight:1.6}}>
-            Great expression is built through deliberate practice. Pick a prompt, record yourself, and review.
+          <div style={{fontSize:11,color:C.textMuted,marginBottom:14,lineHeight:1.6}}>
+            Pick a category, choose a prompt, hit record. The best speakers practice daily 🌿
           </div>
-          {prompts.map((p,i) => (
-            <div key={i} className="prompt-card">
-              <div className="prompt-label">{p.label}</div>
-              <div className="prompt-text">"{p.text}"</div>
-              <div className="prompt-hint">💡 {p.hint}</div>
-              <div style={{display:'flex',gap:8,marginTop:12}}>
-                <div style={{padding:'5px 14px',borderRadius:20,background:C.guanLv,color:C.duanChang,fontSize:11,cursor:'pointer'}}>
-                  ⏺ Record Now
-                </div>
-                <div style={{padding:'5px 14px',borderRadius:20,background:'transparent',border:`1px solid ${C.guanLv}40`,color:C.textMuted,fontSize:11,cursor:'pointer'}}>
-                  Shuffle ↻
-                </div>
+
+          {/* Category selector */}
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+            {Object.entries(catLabels).map(([k,v])=>(
+              <div key={k} onClick={()=>{setMatCat(k);setMatIdx(0);}}
+                style={{padding:'6px 14px',borderRadius:20,fontSize:11,cursor:'pointer',
+                  background:matCat===k?'#2A6E3F':'#F7F9F7',
+                  color:matCat===k?'#fff':'#4A6655',
+                  border:`1px solid ${matCat===k?'#2A6E3F':'#E2EDE5'}`,
+                  fontWeight:matCat===k?500:400}}>
+                {v}
               </div>
+            ))}
+          </div>
+
+          {/* Prompt navigator */}
+          <div style={{background:'#FFFFFF',border:'1px solid #E2EDE5',borderRadius:16,padding:18,marginBottom:14,
+            borderLeft:'3px solid #2A6E3F'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+              <div style={{fontSize:9,color:'#4A9B6F',letterSpacing:2,textTransform:'uppercase',fontWeight:500}}>
+                {catLabels[matCat]} · {matIdx+1}/{materials[matCat].length}
+              </div>
+              <div style={{display:'flex',gap:6}}>
+                <div onClick={()=>setMatIdx(i=>(i-1+materials[matCat].length)%materials[matCat].length)}
+                  style={{width:24,height:24,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:12}}>‹</div>
+                <div onClick={()=>setMatIdx(i=>(i+1)%materials[matCat].length)}
+                  style={{width:24,height:24,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:12}}>›</div>
+              </div>
+            </div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,color:'#1A2E1F',lineHeight:1.7,marginBottom:10}}>
+              "{currentPrompt.text}"
+            </div>
+            <div style={{fontSize:11,color:'#4A9B6F',padding:'8px 12px',background:'#F0F5F1',borderRadius:8}}>
+              💡 {currentPrompt.hint}
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:14}}>
+              <div onClick={()=>setTab('record')}
+                style={{flex:1,padding:'9px',borderRadius:12,background:'#2A6E3F',color:'#fff',fontSize:12,
+                  cursor:'pointer',textAlign:'center',fontWeight:500}}>
+                ⏺ Record Now
+              </div>
+              <div onClick={shuffle}
+                style={{padding:'9px 14px',borderRadius:12,background:'#F7F9F7',border:'1px solid #E2EDE5',
+                  color:'#8AAD95',fontSize:12,cursor:'pointer'}}>
+                ↻ Shuffle
+              </div>
+            </div>
+          </div>
+
+          {/* All prompts in category */}
+          <div style={{fontSize:10,color:'#8AAD95',letterSpacing:1.5,textTransform:'uppercase',marginBottom:8}}>All in this category</div>
+          {materials[matCat].map((p,i)=>(
+            <div key={i} onClick={()=>setMatIdx(i)}
+              style={{padding:'11px 14px',background:i===matIdx?'#2A6E3F10':'#F7F9F7',
+                border:`1px solid ${i===matIdx?'#4A9B6F':'#E2EDE5'}`,borderRadius:11,marginBottom:7,cursor:'pointer'}}>
+              <div style={{fontSize:12,color:'#1A2E1F',lineHeight:1.5}}>{p.text}</div>
             </div>
           ))}
 
           {/* Technique tips */}
-          <div style={{marginTop:8}}>
+          <div style={{marginTop:16}}>
             <div className="sec-hdr" style={{marginBottom:10}}>
               <div className="sec-title" style={{fontSize:13}}>Expression Techniques</div>
             </div>
@@ -2095,11 +2215,11 @@ const Speak = () => {
               {icon:'👁', tip:'Eye Contact', desc:'Look at one person per thought, then move. Creates intimacy at scale.'},
             ].map((t,i) => (
               <div key={i} style={{display:'flex',gap:12,padding:'11px 14px',background:'#F0F5F1',
-                borderRadius:11,marginBottom:7,border:`1px solid ${C.guanLv}20`,alignItems:'flex-start'}}>
+                borderRadius:11,marginBottom:7,border:'1px solid #E2EDE5',alignItems:'flex-start'}}>
                 <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
                 <div>
-                  <div style={{fontSize:12,fontWeight:600,marginBottom:3,color:C.siLv}}>{t.tip}</div>
-                  <div style={{fontSize:11,color:C.textMuted,lineHeight:1.6}}>{t.desc}</div>
+                  <div style={{fontSize:12,fontWeight:600,marginBottom:3,color:'#4A9B6F'}}>{t.tip}</div>
+                  <div style={{fontSize:11,color:'#8AAD95',lineHeight:1.6}}>{t.desc}</div>
                 </div>
               </div>
             ))}
