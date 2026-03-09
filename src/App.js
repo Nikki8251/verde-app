@@ -1071,41 +1071,175 @@ const Period = () => {
 
 // =================== FITNESS ===================
 const Fitness = () => {
+  const [tab, setTab] = useState('yoga');
+  const [yogaLog, setYogaLog] = useState([
+    {id:1, date:'2026-03-09', style:'Hatha', duration:60, teacher:'Sarah', notes:'Great flow, worked on backbends', rating:5},
+    {id:2, date:'2026-03-06', style:'Vinyasa', duration:75, teacher:'Online', notes:'Morning session, felt energized', rating:4},
+    {id:3, date:'2026-03-03', style:'Yin', duration:90, teacher:'Maya', notes:'Deep stretch, very relaxing', rating:5},
+  ]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({date: new Date().toISOString().split('T')[0], style:'Hatha', duration:60, teacher:'', notes:'', rating:5});
   const [done, setDone] = useState([0,2]);
-  const exs = [
-    {name:'Morning Run',detail:'5km · 28 min',icon:'🏃'},
-    {name:'Bench Press',detail:'4×12 · 60kg',icon:'🏋️'},
-    {name:'Yoga Flow',detail:'20 min',icon:'🧘'},
-    {name:'Pull-ups',detail:'3×10',icon:'💪'},
-    {name:'Plank',detail:'3×60s',icon:'⚡'},
-  ];
+
+  const styles = ['Hatha','Vinyasa','Yin','Ashtanga','Restorative','Hot Yoga','Power','Kundalini'];
+  const totalMin = yogaLog.reduce((s,l)=>s+l.duration,0);
+  const thisWeek = yogaLog.filter(l => {
+    const d = new Date(l.date), now = new Date();
+    return (now - d) / 86400000 <= 7;
+  }).length;
+
+  const addLog = () => {
+    if (!form.style) return;
+    setYogaLog([{id:Date.now(), ...form}, ...yogaLog]);
+    setShowAdd(false);
+    setForm({date: new Date().toISOString().split('T')[0], style:'Hatha', duration:60, teacher:'', notes:'', rating:5});
+  };
+
   const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const comp = [true,true,true,false,false,false,false];
+  const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const workoutDays = yogaLog.map(l => {
+    const d = new Date(l.date).getDay();
+    return d === 0 ? 6 : d - 1;
+  });
+
   return (
     <div>
-      <div className="week-bar">
-        {days.map((d,i)=>(
-          <div key={i} className={`wb-day ${comp[i]?'done':''} ${i===2?'today-wd':''}`}>{d}</div>
-        ))}
+      {showAdd && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setShowAdd(false)}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:320,boxShadow:'0 20px 60px rgba(0,0,0,0.2)',maxHeight:'90vh',overflowY:'auto'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,marginBottom:18,color:'#1A2E1F'}}>🧘 Log Yoga Class</div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Date</div>
+              <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}
+                style={{width:'100%',padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Style</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {styles.map(s=>(
+                  <div key={s} onClick={()=>setForm({...form,style:s})}
+                    style={{padding:'5px 11px',borderRadius:20,fontSize:11,cursor:'pointer',
+                      background:form.style===s?'#2A6E3F20':'#F7F9F7',
+                      border:`1px solid ${form.style===s?'#2A6E3F':'#E2EDE5'}`,
+                      color:form.style===s?'#2A6E3F':'#8AAD95'}}>
+                    {s}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:'flex',gap:10,marginBottom:12}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Duration (min)</div>
+                <input type="number" value={form.duration} onChange={e=>setForm({...form,duration:+e.target.value})}
+                  style={{width:'100%',padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Teacher / Studio</div>
+                <input placeholder="Optional" value={form.teacher} onChange={e=>setForm({...form,teacher:e.target.value})}
+                  style={{width:'100%',padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Notes</div>
+              <textarea placeholder="How did it feel?" value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}
+                style={{width:'100%',padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:12,outline:'none',
+                  color:'#1A2E1F',background:'#F7F9F7',resize:'none',height:70,fontFamily:'DM Sans,sans-serif'}}/>
+            </div>
+            <div style={{marginBottom:18}}>
+              <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Rating</div>
+              <div style={{display:'flex',gap:6}}>
+                {[1,2,3,4,5].map(n=>(
+                  <div key={n} onClick={()=>setForm({...form,rating:n})}
+                    style={{fontSize:20,cursor:'pointer',opacity:n<=form.rating?1:0.3}}>⭐</div>
+                ))}
+              </div>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>setShowAdd(false)}
+                style={{flex:1,padding:'11px',borderRadius:12,border:'1px solid #E2EDE5',textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>Cancel</div>
+              <div onClick={addLog}
+                style={{flex:1,padding:'11px',borderRadius:12,background:'#2A6E3F',textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>Log ✓</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="tabs">
+        <div className={`tab ${tab==='yoga'?'on':''}`} onClick={()=>setTab('yoga')}>🧘 Yoga</div>
+        <div className={`tab ${tab==='other'?'on':''}`} onClick={()=>setTab('other')}>🏃 Other</div>
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
-        {[{l:'Calories',v:'487',u:'kcal',e:'🔥'},{l:'Active Time',v:'52',u:'min',e:'⏱'},{l:'Streak',v:'12',u:'days',e:'⚡'}].map((s,i)=>(
-          <div key={i} style={{background:'#F0F5F1',borderRadius:11,padding:'11px',textAlign:'center'}}>
-            <div style={{fontSize:18,marginBottom:4}}>{s.e}</div>
-            <div style={{fontSize:18,fontFamily:"'Cormorant Garamond',serif",fontWeight:300}}>{s.v}</div>
-            <div style={{fontSize:9,color:C.textMuted}}>{s.u}</div>
+
+      {tab==='yoga' && <>
+        <div className="week-bar" style={{marginBottom:12}}>
+          {days.map((d,i)=>(
+            <div key={i} className={`wb-day ${workoutDays.includes(i)?'done':''} ${i===todayIdx?'today-wd':''}`}>{d}</div>
+          ))}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:16}}>
+          {[
+            {l:'This Week',v:thisWeek,u:'classes',e:'🧘'},
+            {l:'Total Time',v:Math.floor(totalMin/60),u:`hrs ${totalMin%60}min`,e:'⏱'},
+            {l:'Sessions',v:yogaLog.length,u:'total',e:'⭐'},
+          ].map((s,i)=>(
+            <div key={i} style={{background:'#F0F5F1',borderRadius:11,padding:'11px',textAlign:'center'}}>
+              <div style={{fontSize:18,marginBottom:4}}>{s.e}</div>
+              <div style={{fontSize:18,fontFamily:"'Cormorant Garamond',serif",fontWeight:300}}>{s.v}</div>
+              <div style={{fontSize:9,color:C.textMuted}}>{s.u}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div className="card-label" style={{marginBottom:0}}><span>📋</span>Class Log</div>
+          <div onClick={()=>setShowAdd(true)}
+            style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500,padding:'4px 10px',
+              border:'1px solid #A8D5B5',borderRadius:20,background:'#F0F5F1'}}>+ Log Class</div>
+        </div>
+        {yogaLog.map((l,i)=>(
+          <div key={l.id} style={{padding:'13px 15px',background:'#FFFFFF',border:'1px solid #E2EDE5',
+            borderRadius:13,marginBottom:8,borderLeft:`3px solid #4A9B6F`}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:500,color:'#1A2E1F'}}>{l.style} Yoga</div>
+                <div style={{fontSize:10,color:'#8AAD95',marginTop:2}}>
+                  {new Date(l.date).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'})}
+                  {l.teacher && ` · ${l.teacher}`}
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{fontSize:11,color:'#4A9B6F',fontWeight:500}}>{l.duration} min</div>
+                <div style={{fontSize:11,color:'#8AAD95'}}>{'⭐'.repeat(l.rating)}</div>
+                <div onClick={()=>setYogaLog(yogaLog.filter((_,j)=>j!==i))}
+                  style={{fontSize:14,color:'#8AAD95',cursor:'pointer'}}>×</div>
+              </div>
+            </div>
+            {l.notes && <div style={{fontSize:11,color:'#4A6655',marginTop:6,fontStyle:'italic'}}>"{l.notes}"</div>}
           </div>
         ))}
-      </div>
-      <div className="card-label"><span>🏆</span>Today's Plan</div>
-      {exs.map((ex,i)=>(
-        <div key={i} className="ex-item" style={{opacity:done.includes(i)?0.55:1}} onClick={()=>setDone(c=>c.includes(i)?c.filter(x=>x!==i):[...c,i])}>
-          <div className={`ex-check ${done.includes(i)?'on':''}`}>{done.includes(i)&&'✓'}</div>
-          <span style={{fontSize:15}}>{ex.icon}</span>
-          <div className="ex-name">{ex.name}</div>
-          <div className="ex-detail">{ex.detail}</div>
+      </>}
+
+      {tab==='other' && <>
+        <div className="week-bar" style={{marginBottom:12}}>
+          {days.map((d,i)=>(
+            <div key={i} className={`wb-day ${[0,1,2].includes(i)?'done':''} ${i===todayIdx?'today-wd':''}`}>{d}</div>
+          ))}
         </div>
-      ))}
+        <div className="card-label"><span>🏆</span>Today's Plan</div>
+        {[
+          {name:'Morning Run',detail:'5km · 28 min',icon:'🏃'},
+          {name:'Bench Press',detail:'4×12 · 60kg',icon:'🏋️'},
+          {name:'Pull-ups',detail:'3×10',icon:'💪'},
+          {name:'Plank',detail:'3×60s',icon:'⚡'},
+        ].map((ex,i)=>(
+          <div key={i} className="ex-item" style={{opacity:done.includes(i)?0.55:1}} onClick={()=>setDone(c=>c.includes(i)?c.filter(x=>x!==i):[...c,i])}>
+            <div className={`ex-check ${done.includes(i)?'on':''}`}>{done.includes(i)&&'✓'}</div>
+            <span style={{fontSize:15}}>{ex.icon}</span>
+            <div className="ex-name">{ex.name}</div>
+            <div className="ex-detail">{ex.detail}</div>
+          </div>
+        ))}
+      </>}
     </div>
   );
 };
@@ -1113,37 +1247,127 @@ const Fitness = () => {
 // =================== READING ===================
 const Reading = () => {
   const [tab, setTab] = useState('book');
-  const books = [
-    {title:'The Psychology of Money',author:'Morgan Housel',emoji:'💰',prog:68,bg:C.guanLv+'30'},
-    {title:'Atomic Habits',author:'James Clear',emoji:'⚡',prog:92,bg:C.kongQue+'25'},
-    {title:'Deep Work',author:'Cal Newport',emoji:'🎯',prog:31,bg:C.songLv+'35'},
-  ];
+  const [books, setBooks] = useState([
+    {id:1, title:'The Psychology of Money', author:'Morgan Housel', emoji:'💰', prog:68},
+    {id:2, title:'Atomic Habits', author:'James Clear', emoji:'⚡', prog:92},
+    {id:3, title:'Deep Work', author:'Cal Newport', emoji:'🎯', prog:31},
+  ]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({title:'', author:'', emoji:'📖', prog:0});
+
   const pods = [
-    {title:'Huberman Lab',ep:'Ep.183 · Sleep Optimization',emoji:'🎙',prog:45},
-    {title:'How I Built This',ep:'Ep.412 · Patagonia',emoji:'🏔',prog:72},
-    {title:'Tim Ferriss Show',ep:'Ep.678 · Naval Ravikant',emoji:'🎧',prog:20},
+    {title:'Huberman Lab', ep:'Ep.183 · Sleep Optimization', emoji:'🎙', prog:45},
+    {title:'How I Built This', ep:'Ep.412 · Patagonia', emoji:'🏔', prog:72},
+    {title:'Tim Ferriss Show', ep:'Ep.678 · Naval Ravikant', emoji:'🎧', prog:20},
   ];
+
+  const openWeChat = () => {
+    window.location.href = 'weread://';
+    setTimeout(() => {
+      window.open('https://weread.qq.com', '_blank');
+    }, 800);
+  };
+
+  const saveBook = () => {
+    if (!form.title.trim()) return;
+    if (editId) {
+      setBooks(books.map(b => b.id === editId ? {...b, ...form} : b));
+      setEditId(null);
+    } else {
+      setBooks([...books, {id: Date.now(), ...form}]);
+    }
+    setForm({title:'', author:'', emoji:'📖', prog:0});
+    setShowAdd(false);
+  };
+
+  const startEdit = (b) => {
+    setForm({title:b.title, author:b.author, emoji:b.emoji, prog:b.prog});
+    setEditId(b.id);
+    setShowAdd(true);
+  };
+
+  const emojis = ['📖','💰','⚡','🎯','🌿','🧠','💡','🔥','🌊','🌸','🏔','✨'];
+
   return (
     <div>
+      {showAdd && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>{setShowAdd(false);setEditId(null);}}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:310,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:18,color:'#1A2E1F'}}>
+              {editId ? 'Edit Book' : 'Add Book'}
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+              {emojis.map(em=>(
+                <div key={em} onClick={()=>setForm({...form,emoji:em})}
+                  style={{fontSize:20,cursor:'pointer',padding:4,borderRadius:8,
+                    background:form.emoji===em?'#2A6E3F20':'transparent',
+                    border:`1px solid ${form.emoji===em?'#2A6E3F':'transparent'}`}}>
+                  {em}
+                </div>
+              ))}
+            </div>
+            <input placeholder="Book title *" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:10,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <input placeholder="Author" value={form.author} onChange={e=>setForm({...form,author:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{marginBottom:16}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
+                <div style={{fontSize:10,color:'#8AAD95'}}>Progress</div>
+                <div style={{fontSize:11,color:'#2A6E3F',fontWeight:500}}>{form.prog}%</div>
+              </div>
+              <input type="range" min="0" max="100" value={form.prog} onChange={e=>setForm({...form,prog:+e.target.value})}
+                style={{width:'100%',accentColor:'#2A6E3F'}}/>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>{setShowAdd(false);setEditId(null);}}
+                style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #E2EDE5',textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>Cancel</div>
+              <div onClick={saveBook}
+                style={{flex:1,padding:'10px',borderRadius:12,background:'#2A6E3F',textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>
+                {editId ? 'Save ✓' : 'Add ✓'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="tabs">
         <div className={`tab ${tab==='book'?'on':''}`} onClick={()=>setTab('book')}>📚 WeChat Books</div>
         <div className={`tab ${tab==='pod'?'on':''}`} onClick={()=>setTab('pod')}>🎧 Apple Podcasts</div>
       </div>
-      {tab==='book'&&<>
+
+      {tab==='book' && <>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+          <div className="card-label" style={{marginBottom:0}}><span>📖</span>Reading List</div>
+          <div onClick={()=>setShowAdd(true)}
+            style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500,padding:'4px 10px',border:'1px solid #A8D5B5',borderRadius:20,background:'#F0F5F1'}}>+ Add Book</div>
+        </div>
         {books.map((b,i)=>(
-          <div key={i} className="media-item">
-            <div className="media-cov" style={{background:b.bg}}>{b.emoji}</div>
+          <div key={b.id} className="media-item">
+            <div className="media-cov" style={{background:'#2A6E3F20'}}>{b.emoji}</div>
             <div style={{flex:1}}>
               <div className="media-title">{b.title}</div>
               <div className="media-sub">{b.author}</div>
               <div className="media-prog"><div className="media-prog-fill" style={{width:`${b.prog}%`}}/></div>
             </div>
-            <span style={{fontSize:11,color:C.siLv,fontWeight:600}}>{b.prog}%</span>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:11,color:'#4A9B6F',fontWeight:600}}>{b.prog}%</span>
+              <div onClick={()=>startEdit(b)} style={{fontSize:12,color:'#8AAD95',cursor:'pointer',padding:'2px 6px'}}>✏️</div>
+              <div onClick={()=>setBooks(books.filter(x=>x.id!==b.id))} style={{fontSize:13,color:'#8AAD95',cursor:'pointer'}}>×</div>
+            </div>
           </div>
         ))}
-        <div style={{textAlign:'center'}}><div className="open-btn">📱 Open WeChat Books</div></div>
+        <div style={{textAlign:'center',marginTop:8}}>
+          <div className="open-btn" onClick={openWeChat}
+            style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
+            📱 Open WeChat Books
+          </div>
+        </div>
       </>}
-      {tab==='pod'&&<>
+
+      {tab==='pod' && <>
         {pods.map((p,i)=>(
           <div key={i} className="media-item">
             <div className="media-cov" style={{background:'#F0F5F1'}}>{p.emoji}</div>
@@ -1152,10 +1376,14 @@ const Reading = () => {
               <div className="media-sub">{p.ep}</div>
               <div className="media-prog"><div className="media-prog-fill" style={{width:`${p.prog}%`}}/></div>
             </div>
-            <div style={{width:30,height:30,borderRadius:'50%',background:C.guanLv,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,cursor:'pointer'}}>▶</div>
+            <div style={{width:30,height:30,borderRadius:'50%',background:'#2A6E3F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,cursor:'pointer',color:'white'}}>▶</div>
           </div>
         ))}
-        <div style={{textAlign:'center'}}><div className="open-btn">🎵 Open Apple Podcasts</div></div>
+        <div style={{textAlign:'center',marginTop:8}}>
+          <div className="open-btn" onClick={()=>window.open('podcast://','_blank')} style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
+            🎵 Open Apple Podcasts
+          </div>
+        </div>
       </>}
     </div>
   );
@@ -1194,29 +1422,216 @@ const Finance = () => (
 
 // =================== TRAVEL ===================
 const Travel = () => {
-  const trips = [
-    {name:'Zhangjiajie',type:'Nature 🏞',date:'Apr 12–18',emoji:'⛰️',status:'Planning'},
-    {name:'Wuyi Camping',type:'Camping ⛺',date:'May 3–5',emoji:'🏕️',status:'Confirmed'},
-    {name:'Tokyo Trip',type:'City 🏙',date:'Jun 20–28',emoji:'🗾',status:'Dreaming'},
-    {name:'Sanya Beach',type:'Beach 🏖',date:'Aug 1–7',emoji:'🌊',status:'Planning'},
-  ];
-  const sc = {'Planning':C.siLv,'Confirmed':C.kongQue,'Dreaming':'#9b72cf'};
+  const [trips, setTrips] = useState([
+    {id:1, name:'Zhangjiajie', type:'Nature', date:'Apr 12–18', emoji:'⛰️', status:'Planning', notes:'Book cable car tickets'},
+    {id:2, name:'Wuyi Camping', type:'Camping', date:'May 3–5', emoji:'🏕️', status:'Confirmed', notes:'Campsite booked at site B3'},
+    {id:3, name:'Tokyo Trip', type:'City', date:'Jun 20–28', emoji:'🗾', status:'Dreaming', notes:''},
+    {id:4, name:'Sanya Beach', type:'Beach', date:'Aug 1–7', emoji:'🌊', status:'Planning', notes:''},
+  ]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [editTrip, setEditTrip] = useState(null);
+  const [showCamping, setShowCamping] = useState(false);
+  const [form, setForm] = useState({name:'', type:'Nature', date:'', emoji:'🌍', status:'Dreaming', notes:''});
+
+  const [campingItems, setCampingItems] = useState([
+    {id:1, name:'Tent', cat:'Shelter', packed:true},
+    {id:2, name:'Sleeping bag', cat:'Shelter', packed:true},
+    {id:3, name:'Sleeping pad', cat:'Shelter', packed:false},
+    {id:4, name:'Headlamp + batteries', cat:'Lighting', packed:true},
+    {id:5, name:'Camp stove + fuel', cat:'Cooking', packed:false},
+    {id:6, name:'Cookware set', cat:'Cooking', packed:false},
+    {id:7, name:'Water filter', cat:'Water', packed:true},
+    {id:8, name:'First aid kit', cat:'Safety', packed:true},
+    {id:9, name:'Rain jacket', cat:'Clothing', packed:false},
+    {id:10, name:'Hiking boots', cat:'Clothing', packed:true},
+    {id:11, name:'Sunscreen SPF50', cat:'Personal', packed:false},
+    {id:12, name:'Insect repellent', cat:'Personal', packed:false},
+  ]);
+  const [newGear, setNewGear] = useState('');
+  const [newGearCat, setNewGearCat] = useState('Other');
+
+  const statusColors = {Planning:'#4A9B6F', Confirmed:'#2A6E3F', Dreaming:'#9b72cf'};
+  const types = ['Nature','Camping','City','Beach','Mountain','Road Trip','Cultural'];
+  const emojis = ['🌍','⛰️','🏕️','🗾','🌊','🏖️','🏙️','🌸','🎌','🏔️','🚗','✈️'];
+  const statuses = ['Dreaming','Planning','Confirmed'];
+  const gearCats = ['Shelter','Lighting','Cooking','Water','Safety','Clothing','Personal','Other'];
+
+  const packedCount = campingItems.filter(x=>x.packed).length;
+
+  const openAddTrip = () => {
+    setEditTrip(null);
+    setForm({name:'', type:'Nature', date:'', emoji:'🌍', status:'Dreaming', notes:''});
+    setShowAdd(true);
+  };
+
+  const openEditTrip = (t) => {
+    setEditTrip(t.id);
+    setForm({name:t.name, type:t.type, date:t.date, emoji:t.emoji, status:t.status, notes:t.notes});
+    setShowAdd(true);
+  };
+
+  const saveTrip = () => {
+    if (!form.name.trim()) return;
+    if (editTrip) {
+      setTrips(trips.map(t => t.id === editTrip ? {...t, ...form} : t));
+    } else {
+      setTrips([...trips, {id:Date.now(), ...form}]);
+    }
+    setShowAdd(false);
+    setEditTrip(null);
+  };
+
+  const addGear = () => {
+    if (!newGear.trim()) return;
+    setCampingItems([...campingItems, {id:Date.now(), name:newGear, cat:newGearCat, packed:false}]);
+    setNewGear('');
+  };
+
   return (
     <div>
+      {/* Add/Edit Trip Modal */}
+      {showAdd && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>{setShowAdd(false);setEditTrip(null);}}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:320,boxShadow:'0 20px 60px rgba(0,0,0,0.2)',maxHeight:'90vh',overflowY:'auto'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:18,color:'#1A2E1F'}}>
+              {editTrip ? '✏️ Edit Trip' : '✈️ New Trip'}
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+              {emojis.map(em=>(
+                <div key={em} onClick={()=>setForm({...form,emoji:em})}
+                  style={{fontSize:20,cursor:'pointer',padding:4,borderRadius:8,
+                    background:form.emoji===em?'#2A6E3F20':'transparent',
+                    border:`1px solid ${form.emoji===em?'#2A6E3F':'transparent'}`}}>
+                  {em}
+                </div>
+              ))}
+            </div>
+            <input placeholder="Destination *" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:10,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <input placeholder="Dates (e.g. Apr 12–18)" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:10,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{display:'flex',gap:8,marginBottom:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'#8AAD95',marginBottom:4}}>Type</div>
+                <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}
+                  style={{width:'100%',padding:'9px 10px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}>
+                  {types.map(t=><option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'#8AAD95',marginBottom:4}}>Status</div>
+                <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}
+                  style={{width:'100%',padding:'9px 10px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}>
+                  {statuses.map(s=><option key={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <textarea placeholder="Notes..." value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:12,marginBottom:16,outline:'none',
+                color:'#1A2E1F',background:'#F7F9F7',resize:'none',height:60,fontFamily:'DM Sans,sans-serif'}}/>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>{setShowAdd(false);setEditTrip(null);}}
+                style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #E2EDE5',textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>Cancel</div>
+              <div onClick={saveTrip}
+                style={{flex:1,padding:'10px',borderRadius:12,background:'#2A6E3F',textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>
+                {editTrip ? 'Save ✓' : 'Add ✓'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Camping Checklist Modal */}
+      {showCamping && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setShowCamping(false)}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:340,boxShadow:'0 20px 60px rgba(0,0,0,0.2)',maxHeight:'85vh',overflowY:'auto'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,color:'#1A2E1F'}}>⛺ Camping Gear</div>
+              <div onClick={()=>setShowCamping(false)} style={{fontSize:20,color:'#8AAD95',cursor:'pointer'}}>×</div>
+            </div>
+            <div style={{fontSize:11,color:'#4A9B6F',marginBottom:16}}>{packedCount} / {campingItems.length} packed</div>
+
+            {/* Progress bar */}
+            <div style={{height:4,background:'#E2EDE5',borderRadius:2,marginBottom:16,overflow:'hidden'}}>
+              <div style={{height:'100%',background:'#2A6E3F',borderRadius:2,width:`${(packedCount/campingItems.length)*100}%`,transition:'width 0.3s'}}/>
+            </div>
+
+            {/* Group by category */}
+            {gearCats.filter(cat=>campingItems.some(i=>i.cat===cat)).map(cat=>(
+              <div key={cat} style={{marginBottom:12}}>
+                <div style={{fontSize:9,color:'#8AAD95',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>{cat}</div>
+                {campingItems.filter(i=>i.cat===cat).map(item=>(
+                  <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F0F5F1'}}>
+                    <div onClick={()=>setCampingItems(campingItems.map(x=>x.id===item.id?{...x,packed:!x.packed}:x))}
+                      style={{width:20,height:20,borderRadius:6,border:`2px solid ${item.packed?'#2A6E3F':'#E2EDE5'}`,
+                        background:item.packed?'#2A6E3F':'transparent',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
+                      {item.packed&&<span style={{color:'white',fontSize:10}}>✓</span>}
+                    </div>
+                    <div style={{flex:1,fontSize:13,color:item.packed?'#8AAD95':'#1A2E1F',textDecoration:item.packed?'line-through':'none'}}>{item.name}</div>
+                    <div onClick={()=>setCampingItems(campingItems.filter(x=>x.id!==item.id))}
+                      style={{fontSize:13,color:'#8AAD95',cursor:'pointer',padding:'0 4px'}}>×</div>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            {/* Add gear */}
+            <div style={{display:'flex',gap:8,marginTop:12}}>
+              <input placeholder="Add item..." value={newGear} onChange={e=>setNewGear(e.target.value)}
+                onKeyDown={e=>e.key==='Enter'&&addGear()}
+                style={{flex:1,padding:'9px 12px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+              <select value={newGearCat} onChange={e=>setNewGearCat(e.target.value)}
+                style={{padding:'9px 8px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:11,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}>
+                {gearCats.map(c=><option key={c}>{c}</option>)}
+              </select>
+              <div onClick={addGear}
+                style={{padding:'9px 14px',borderRadius:10,background:'#2A6E3F',color:'#fff',fontSize:13,cursor:'pointer',fontWeight:500}}>+</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trip grid */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+        <div className="card-label" style={{marginBottom:0}}><span>✈️</span>My Trips</div>
+        <div onClick={openAddTrip}
+          style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500,padding:'4px 10px',border:'1px solid #A8D5B5',borderRadius:20,background:'#F0F5F1'}}>+ Add Trip</div>
+      </div>
       <div className="g2" style={{marginBottom:14}}>
-        {trips.map((t,i)=>(
-          <div key={i} className="trip-card">
+        {trips.map((t)=>(
+          <div key={t.id} className="trip-card" style={{position:'relative'}}>
+            <div style={{position:'absolute',top:8,right:8,display:'flex',gap:4}}>
+              <div onClick={()=>openEditTrip(t)} style={{fontSize:12,cursor:'pointer',opacity:0.5}}>✏️</div>
+              <div onClick={()=>setTrips(trips.filter(x=>x.id!==t.id))} style={{fontSize:13,color:'#8AAD95',cursor:'pointer',lineHeight:1}}>×</div>
+            </div>
             <div className="trip-emoji">{t.emoji}</div>
             <div className="trip-name">{t.name}</div>
             <div className="trip-date">{t.date} · {t.type}</div>
-            <div className="badge" style={{marginTop:8,background:sc[t.status]+'20',color:sc[t.status],border:`1px solid ${sc[t.status]}40`}}>{t.status}</div>
+            {t.notes && <div style={{fontSize:9,color:'#8AAD95',marginTop:4,fontStyle:'italic'}}>{t.notes}</div>}
+            <div className="badge" style={{marginTop:8,background:statusColors[t.status]+'20',color:statusColors[t.status],border:`1px solid ${statusColors[t.status]}40`}}>{t.status}</div>
           </div>
         ))}
       </div>
-      <div style={{padding:'13px',background:'#F0F5F1',borderRadius:12,display:'flex',gap:12,alignItems:'center'}}>
+
+      {/* Camping checklist banner */}
+      <div onClick={()=>setShowCamping(true)}
+        style={{padding:'14px 16px',background:'#F0F5F1',borderRadius:14,display:'flex',gap:12,alignItems:'center',cursor:'pointer',
+          border:'1px solid #E2EDE5',transition:'all 0.2s'}}
+        onMouseEnter={e=>e.currentTarget.style.borderColor='#A8D5B5'}
+        onMouseLeave={e=>e.currentTarget.style.borderColor='#E2EDE5'}>
         <span style={{fontSize:26}}>🗺</span>
-        <div><div style={{fontSize:13,fontWeight:600,marginBottom:2}}>Camping Checklist</div><div style={{fontSize:10,color:C.textMuted}}>Wuyi Mountains · 8 items ready</div></div>
-        <div style={{marginLeft:'auto',fontSize:11,color:C.kongQue}}>View →</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:2,color:'#1A2E1F'}}>Camping Checklist</div>
+          <div style={{fontSize:10,color:'#8AAD95'}}>Wuyi Mountains · {packedCount}/{campingItems.length} items packed</div>
+          <div style={{height:3,background:'#E2EDE5',borderRadius:2,marginTop:6,overflow:'hidden'}}>
+            <div style={{height:'100%',background:'#4A9B6F',width:`${(packedCount/campingItems.length)*100}%`}}/>
+          </div>
+        </div>
+        <div style={{fontSize:11,color:'#4A9B6F',fontWeight:500}}>View →</div>
       </div>
     </div>
   );
