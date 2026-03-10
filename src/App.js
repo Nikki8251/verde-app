@@ -1739,8 +1739,10 @@ const Notes = () => {
     !search || n.text?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Mobile: show list or editor
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'editor'
+
+  // On desktop always show both; on mobile show one at a time
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640;
 
   return (
     <div style={{display:'flex', gap:0, height:'calc(100vh - 130px)', minHeight:500,
@@ -1750,8 +1752,8 @@ const Notes = () => {
       {/* Sidebar — note list */}
       <div style={{width:260, flexShrink:0, borderRight:'1px solid var(--border-soft)',
         display:'flex', flexDirection:'column',
-        // Hide on mobile when editing
-        ...(mobileView === 'editor' ? {display:'none'} : {})}}>
+        // On mobile: hide when editing
+        ...(mobileView === 'editor' ? {display:'none'} : {display:'flex'})}}>
 
         {/* Top bar */}
         <div style={{padding:'16px 14px 12px', borderBottom:'1px solid var(--border-soft)'}}>
@@ -1766,7 +1768,6 @@ const Notes = () => {
               +
             </div>
           </div>
-          {/* Search */}
           <div style={{position:'relative'}}>
             <div style={{position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
               fontSize:12, color:'var(--ink-faint)'}}>🔍</div>
@@ -1818,16 +1819,14 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Editor */}
+      {/* Editor — on mobile only show when editing */}
       <div style={{flex:1, display:'flex', flexDirection:'column',
-        ...(mobileView === 'list' ? {display:'none'} : {})}}>
+        ...(mobileView === 'list' ? {display:'none'} : {display:'flex'})}}>
         {activeNote ? (
           <>
-            {/* Editor toolbar */}
             <div style={{padding:'12px 20px', borderBottom:'1px solid var(--border-soft)',
               display:'flex', alignItems:'center', justifyContent:'space-between',
               background:'var(--white)'}}>
-              {/* Mobile back button */}
               <div onClick={() => setMobileView('list')}
                 style={{fontSize:11, color:'var(--green-mid)', cursor:'pointer',
                   fontFamily:"'Outfit',sans-serif", fontWeight:500,
@@ -1844,8 +1843,6 @@ const Notes = () => {
                 Delete
               </div>
             </div>
-
-            {/* Textarea */}
             <textarea
               value={activeNote.text}
               onChange={e => updateNote(activeNote.id, e.target.value)}
@@ -1875,14 +1872,11 @@ const Notes = () => {
         )}
       </div>
 
-      {/* Desktop: always show both panels */}
+      {/* Desktop: always show both panels via CSS */}
       <style>{`
         @media (min-width: 641px) {
-          .notes-sidebar { display: flex !important; }
-          .notes-editor  { display: flex !important; }
-        }
-        @media (max-width: 640px) {
-          .notes-back { display: flex !important; }
+          .notes-list-panel { display: flex !important; width: 260px !important; }
+          .notes-edit-panel { display: flex !important; }
         }
       `}</style>
     </div>
@@ -2514,7 +2508,7 @@ const Speak = () => {
       {/* ── Materials Library ── */}
       {tab === 'materials' && (
         <div className="fu">
-          <div style={{fontSize:11,color:C.textMuted,marginBottom:14,lineHeight:1.6}}>
+          <div style={{fontSize:11,color:'var(--ink-soft)',marginBottom:14,lineHeight:1.6,fontFamily:"'Outfit',sans-serif"}}>
             Pick a category, choose a prompt, hit record. The best speakers practice daily 🌿
           </div>
 
@@ -2523,76 +2517,120 @@ const Speak = () => {
             {Object.entries(catLabels).map(([k,v])=>(
               <div key={k} onClick={()=>{setMatCat(k);setMatIdx(0);}}
                 style={{padding:'6px 14px',borderRadius:20,fontSize:11,cursor:'pointer',
-                  background:matCat===k?'#2A6E3F':'#F7F9F7',
-                  color:matCat===k?'#fff':'#4A6655',
-                  border:`1px solid ${matCat===k?'#2A6E3F':'#E2EDE5'}`,
-                  fontWeight:matCat===k?500:400}}>
+                  background:matCat===k?'var(--green-deep)':'var(--green-wash)',
+                  color:matCat===k?'#fff':'var(--ink-soft)',
+                  border:`1px solid ${matCat===k?'var(--green-deep)':'var(--border)'}`,
+                  fontWeight:matCat===k?500:400,fontFamily:"'Outfit',sans-serif",transition:'all 0.15s'}}>
                 {v}
               </div>
             ))}
           </div>
 
-          {/* Prompt navigator */}
-          <div style={{background:'#FFFFFF',border:'1px solid #E2EDE5',borderRadius:16,padding:18,marginBottom:14,
-            borderLeft:'3px solid #2A6E3F'}}>
+          {/* Prompt card */}
+          <div style={{background:'var(--white)',border:'1px solid var(--border-soft)',borderRadius:16,padding:18,marginBottom:14,
+            borderLeft:'3px solid var(--green-deep)',boxShadow:'var(--shadow-sm)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-              <div style={{fontSize:9,color:'#4A9B6F',letterSpacing:2,textTransform:'uppercase',fontWeight:500}}>
+              <div style={{fontSize:9,color:'var(--green-mid)',letterSpacing:2,textTransform:'uppercase',fontWeight:600,fontFamily:"'Outfit',sans-serif"}}>
                 {catLabels[matCat]} · {matIdx+1}/{materials[matCat].length}
               </div>
               <div style={{display:'flex',gap:6}}>
                 <div onClick={()=>setMatIdx(i=>(i-1+materials[matCat].length)%materials[matCat].length)}
-                  style={{width:24,height:24,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:12}}>‹</div>
+                  style={{width:26,height:26,borderRadius:'50%',background:'var(--green-wash)',border:'1px solid var(--border)',
+                    display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:12,color:'var(--ink-soft)'}}>‹</div>
                 <div onClick={()=>setMatIdx(i=>(i+1)%materials[matCat].length)}
-                  style={{width:24,height:24,borderRadius:'50%',background:'#F0F5F1',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:12}}>›</div>
+                  style={{width:26,height:26,borderRadius:'50%',background:'var(--green-wash)',border:'1px solid var(--border)',
+                    display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:12,color:'var(--ink-soft)'}}>›</div>
               </div>
             </div>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,color:'#1A2E1F',lineHeight:1.7,marginBottom:10}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,color:'var(--ink)',lineHeight:1.75,marginBottom:10,fontStyle:'italic'}}>
               "{currentPrompt.text}"
             </div>
-            <div style={{fontSize:11,color:'#4A9B6F',padding:'8px 12px',background:'#F0F5F1',borderRadius:8}}>
+            <div style={{fontSize:11,color:'var(--green-mid)',padding:'8px 12px',background:'var(--green-wash)',borderRadius:8,marginBottom:14}}>
               💡 {currentPrompt.hint}
             </div>
-            <div style={{display:'flex',gap:8,marginTop:14}}>
-              <div onClick={()=>setTab('record')}
-                style={{flex:1,padding:'9px',borderRadius:12,background:'#2A6E3F',color:'#fff',fontSize:12,
-                  cursor:'pointer',textAlign:'center',fontWeight:500}}>
-                ⏺ Record Now
+
+            {/* Inline recorder */}
+            <div style={{background:'var(--green-wash)',borderRadius:14,padding:'16px',border:'1px solid var(--border)'}}>
+              <div style={{display:'flex',alignItems:'center',gap:14}}>
+                {/* Waveform */}
+                <div style={{display:'flex',alignItems:'center',gap:2,flex:1,height:32}}>
+                  {heights.slice(0,18).map((h,i)=>(
+                    <div key={i} style={{width:3,borderRadius:2,flexShrink:0,
+                      background: recording ? 'var(--green-mid)' : 'var(--green-pale)',
+                      height: recording ? undefined : Math.floor(h*0.25+2)+'px',
+                      ...(recording ? {animation:`recPulse ${0.4+(i%5)*0.1}s ease-in-out infinite alternate`,
+                        '--h': h+'px', '--dur': (0.4+(i%5)*0.1)+'s'} : {})}}/>
+                  ))}
+                </div>
+                {/* Timer */}
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,color:'var(--ink)',
+                  letterSpacing:3,minWidth:52,textAlign:'center'}}>
+                  {fmt(seconds)}
+                </div>
+                {/* Record button */}
+                <button onClick={toggleRec}
+                  style={{width:44,height:44,borderRadius:'50%',border:'none',cursor:'pointer',
+                    background: recording ? '#e2231a' : 'var(--green-deep)',
+                    color:'white',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',
+                    boxShadow: recording ? '0 0 0 4px rgba(226,35,26,0.2)' : '0 2px 10px rgba(30,92,53,0.25)',
+                    animation: recording ? 'recGlow 1.2s infinite' : 'none',
+                    flexShrink:0,transition:'background 0.2s'}}>
+                  {recording ? '⏹' : '⏺'}
+                </button>
               </div>
+              <div style={{textAlign:'center',marginTop:8,fontSize:9,color:'var(--ink-faint)',
+                letterSpacing:2,textTransform:'uppercase',fontFamily:"'Outfit',sans-serif",
+                animation: recording ? 'pulse 1s infinite' : 'none',
+                color: recording ? '#e2231a' : 'var(--ink-faint)'}}>
+                {recording ? '● Recording' : 'Tap ⏺ to record your response'}
+              </div>
+            </div>
+
+            <div style={{display:'flex',gap:8,marginTop:12}}>
               <div onClick={shuffle}
-                style={{padding:'9px 14px',borderRadius:12,background:'#F7F9F7',border:'1px solid #E2EDE5',
-                  color:'#8AAD95',fontSize:12,cursor:'pointer'}}>
+                style={{flex:1,padding:'9px',borderRadius:12,background:'var(--green-wash)',
+                  border:'1px solid var(--border)',color:'var(--ink-soft)',fontSize:12,
+                  cursor:'pointer',textAlign:'center',fontFamily:"'Outfit',sans-serif"}}>
                 ↻ Shuffle
+              </div>
+              <div onClick={()=>setTab('record')}
+                style={{flex:1,padding:'9px',borderRadius:12,background:'var(--white)',
+                  border:'1px solid var(--border)',color:'var(--ink-soft)',fontSize:12,
+                  cursor:'pointer',textAlign:'center',fontFamily:"'Outfit',sans-serif"}}>
+                📋 All Recordings
               </div>
             </div>
           </div>
 
           {/* All prompts in category */}
-          <div style={{fontSize:10,color:'#8AAD95',letterSpacing:1.5,textTransform:'uppercase',marginBottom:8}}>All in this category</div>
+          <div style={{fontSize:10,color:'var(--ink-faint)',letterSpacing:1.5,textTransform:'uppercase',marginBottom:8,
+            fontFamily:"'Outfit',sans-serif",fontWeight:500}}>All in this category</div>
           {materials[matCat].map((p,i)=>(
             <div key={i} onClick={()=>setMatIdx(i)}
-              style={{padding:'11px 14px',background:i===matIdx?'#2A6E3F10':'#F7F9F7',
-                border:`1px solid ${i===matIdx?'#4A9B6F':'#E2EDE5'}`,borderRadius:11,marginBottom:7,cursor:'pointer'}}>
-              <div style={{fontSize:12,color:'#1A2E1F',lineHeight:1.5}}>{p.text}</div>
+              style={{padding:'11px 14px',
+                background:i===matIdx?'var(--green-wash)':'var(--white)',
+                border:`1px solid ${i===matIdx?'var(--green-light)':'var(--border-soft)'}`,
+                borderRadius:11,marginBottom:7,cursor:'pointer',transition:'all 0.12s'}}>
+              <div style={{fontSize:12,color:'var(--ink)',lineHeight:1.5,fontFamily:"'Outfit',sans-serif"}}>{p.text}</div>
             </div>
           ))}
 
           {/* Technique tips */}
           <div style={{marginTop:16}}>
-            <div className="sec-hdr" style={{marginBottom:10}}>
-              <div className="sec-title" style={{fontSize:13}}>Expression Techniques</div>
-            </div>
+            <div style={{fontSize:10,color:'var(--ink-faint)',letterSpacing:1.5,textTransform:'uppercase',
+              marginBottom:10,fontFamily:"'Outfit',sans-serif",fontWeight:500}}>Expression Techniques</div>
             {[
               {icon:'🌊', tip:'Pacing', desc:'Vary your speed. Slow down for important points, speed up for energy.'},
               {icon:'🎭', tip:'Vocal Range', desc:'Raise pitch for excitement, lower for gravity. Monotone kills engagement.'},
               {icon:'⏸', tip:'The Pause', desc:'Silence is powerful. A 2-second pause before a key point doubles its impact.'},
               {icon:'👁', tip:'Eye Contact', desc:'Look at one person per thought, then move. Creates intimacy at scale.'},
             ].map((t,i) => (
-              <div key={i} style={{display:'flex',gap:12,padding:'11px 14px',background:'#F0F5F1',
-                borderRadius:11,marginBottom:7,border:'1px solid #E2EDE5',alignItems:'flex-start'}}>
+              <div key={i} style={{display:'flex',gap:12,padding:'11px 14px',background:'var(--green-wash)',
+                borderRadius:11,marginBottom:7,border:'1px solid var(--border)',alignItems:'flex-start'}}>
                 <span style={{fontSize:18,flexShrink:0}}>{t.icon}</span>
                 <div>
-                  <div style={{fontSize:12,fontWeight:600,marginBottom:3,color:'#4A9B6F'}}>{t.tip}</div>
-                  <div style={{fontSize:11,color:'#8AAD95',lineHeight:1.6}}>{t.desc}</div>
+                  <div style={{fontSize:12,fontWeight:600,marginBottom:3,color:'var(--green-mid)',fontFamily:"'Outfit',sans-serif"}}>{t.tip}</div>
+                  <div style={{fontSize:11,color:'var(--ink-soft)',lineHeight:1.6,fontFamily:"'Outfit',sans-serif"}}>{t.desc}</div>
                 </div>
               </div>
             ))}
