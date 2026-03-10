@@ -1664,96 +1664,227 @@ const Travel = () => {
   );
 };
 
-// =================== JOURNAL (Supabase connected) ===================
-const Journal = () => {
-  const [text, setText] = useState('');
-  const [mood, setMood] = useState(null);
-  const [entries, setEntries] = useState([]);
+// =================== NOTES (Apple Notes style) ===================
+const Notes = () => {
+  const [notes, setNotes] = useState([]);
+  const [activeId, setActiveId] = useState(null);
+  const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { loadEntries(); }, []);
+  useEffect(() => { loadNotes(); }, []);
 
-  const loadEntries = async () => {
-    const { data, error } = await supabase
+  const loadNotes = async () => {
+    const { data } = await supabase
       .from('journal_entries')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(30);
-    if (data) setEntries(data);
-    if (error) console.error('Load error:', error);
+      .limit(100);
+    if (data) {
+      setNotes(data);
+      if (data.length > 0 && !activeId) setActiveId(data[0].id);
+    }
   };
 
-  const handleSave = async () => {
-    if (!text.trim()) return;
-    setSaving(true);
-    const { error } = await supabase.from('journal_entries').insert({
-      text: text.trim(),
-      mood: mood || '💚',
+  const activeNote = notes.find(n => n.id === activeId) || null;
+
+  const newNote = async () => {
+    const { data } = await supabase.from('journal_entries').insert({
+      text: '',
+      mood: '📝',
       tags: [],
       user_id: 'nikki',
-    });
-    if (error) { console.error('Save error:', error); }
-    else { setText(''); setMood(null); await loadEntries(); }
+    }).select().single();
+    if (data) {
+      setNotes([data, ...notes]);
+      setActiveId(data.id);
+    }
+  };
+
+  const updateNote = async (id, text) => {
+    setNotes(notes.map(n => n.id === id ? {...n, text} : n));
+    setSaving(true);
+    await supabase.from('journal_entries').update({ text }).eq('id', id);
     setSaving(false);
   };
 
-  const fmtTime = (ts) => {
-    const d = new Date(ts);
-    const now = new Date();
-    const diffDays = Math.floor((now - d) / 86400000);
-    const hhmm = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    if (diffDays === 0) return `Today ${hhmm}`;
-    if (diffDays === 1) return `Yesterday ${hhmm}`;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const deleteNote = async (id) => {
+    await supabase.from('journal_entries').delete().eq('id', id);
+    const remaining = notes.filter(n => n.id !== id);
+    setNotes(remaining);
+    setActiveId(remaining[0]?.id || null);
   };
 
-  const moods = ['🌿','☀️','🌙','💭','🔥','🌧','✨','💚'];
+  const fmtDate = (ts) => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 86400000);
+    if (diff === 0) return d.toLocaleTimeString('en-AU', {hour:'2-digit', minute:'2-digit'});
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return d.toLocaleDateString('en-AU', {weekday:'short'});
+    return d.toLocaleDateString('en-AU', {month:'short', day:'numeric'});
+  };
+
+  const preview = (text) => {
+    if (!text?.trim()) return 'No additional text';
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    return lines[1] || lines[0]?.slice(0, 60) || 'No additional text';
+  };
+
+  const title = (text) => {
+    if (!text?.trim()) return 'New Note';
+    return text.trim().split('\n')[0].slice(0, 40) || 'New Note';
+  };
+
+  const filtered = notes.filter(n =>
+    !search || n.text?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Mobile: show list or editor
+  const [mobileView, setMobileView] = useState('list'); // 'list' | 'editor'
 
   return (
-    <div>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-label"><span>✍️</span>Today's Thoughts</div>
-        <textarea
-          className="journal-textarea"
-          placeholder="What's on your mind? Even just one sentence…"
-          value={text}
-          onChange={e => setText(e.target.value)}
-        />
-        <div className="journal-toolbar">
-          <div className="mood-row">
-            {moods.map(m => (
-              <div key={m} className={`mood-btn ${mood===m?'selected':''}`} onClick={() => setMood(m===mood?null:m)}>{m}</div>
-            ))}
+    <div style={{display:'flex', gap:0, height:'calc(100vh - 130px)', minHeight:500,
+      background:'var(--white)', borderRadius:20, overflow:'hidden',
+      border:'1px solid var(--border-soft)', boxShadow:'var(--shadow-md)'}}>
+
+      {/* Sidebar — note list */}
+      <div style={{width:260, flexShrink:0, borderRight:'1px solid var(--border-soft)',
+        display:'flex', flexDirection:'column',
+        // Hide on mobile when editing
+        ...(mobileView === 'editor' ? {display:'none'} : {})}}>
+
+        {/* Top bar */}
+        <div style={{padding:'16px 14px 12px', borderBottom:'1px solid var(--border-soft)'}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:18, color:'var(--ink)', fontWeight:400}}>
+              Notes
+            </div>
+            <div onClick={newNote}
+              style={{width:28, height:28, borderRadius:8, background:'var(--green-deep)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                cursor:'pointer', color:'white', fontSize:16, fontWeight:300}}>
+              +
+            </div>
           </div>
-          <button className="journal-save" onClick={handleSave} disabled={saving}>
-            {saving ? '...' : 'Save ✓'}
-          </button>
+          {/* Search */}
+          <div style={{position:'relative'}}>
+            <div style={{position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
+              fontSize:12, color:'var(--ink-faint)'}}>🔍</div>
+            <input value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="Search notes…"
+              style={{width:'100%', padding:'7px 10px 7px 28px',
+                background:'var(--green-wash)', border:'1px solid var(--border)',
+                borderRadius:10, fontSize:12, outline:'none', color:'var(--ink)',
+                fontFamily:"'Outfit',sans-serif"}}/>
+          </div>
+        </div>
+
+        {/* Note list */}
+        <div style={{flex:1, overflowY:'auto'}}>
+          {filtered.length === 0 && (
+            <div style={{padding:'30px 14px', textAlign:'center', color:'var(--ink-faint)', fontSize:12}}>
+              {search ? 'No matching notes' : 'No notes yet — tap + to create one'}
+            </div>
+          )}
+          {filtered.map(n => (
+            <div key={n.id} onClick={() => { setActiveId(n.id); setMobileView('editor'); }}
+              style={{padding:'12px 14px', cursor:'pointer', borderBottom:'1px solid var(--border-soft)',
+                background: n.id === activeId ? 'var(--green-wash)' : 'transparent',
+                borderLeft: n.id === activeId ? '3px solid var(--green-deep)' : '3px solid transparent',
+                transition:'all 0.12s'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:3}}>
+                <div style={{fontSize:13, fontWeight:500, color:'var(--ink)',
+                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                  maxWidth:140, fontFamily:"'Outfit',sans-serif"}}>
+                  {title(n.text)}
+                </div>
+                <div style={{fontSize:9.5, color:'var(--ink-faint)', flexShrink:0, marginLeft:6,
+                  fontFamily:"'Outfit',sans-serif"}}>
+                  {fmtDate(n.created_at)}
+                </div>
+              </div>
+              <div style={{fontSize:11, color:'var(--ink-soft)',
+                overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                fontFamily:"'Outfit',sans-serif"}}>
+                {preview(n.text)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{padding:'10px 14px', borderTop:'1px solid var(--border-soft)',
+          fontSize:10, color:'var(--ink-faint)', textAlign:'center', fontFamily:"'Outfit',sans-serif"}}>
+          {notes.length} note{notes.length !== 1 ? 's' : ''}
         </div>
       </div>
 
-      <div className="sec-hdr">
-        <div className="sec-title">Past Entries</div>
-        <div className="sec-action">View All →</div>
-      </div>
-      {entries.length === 0 && (
-        <div style={{textAlign:'center', color: C.textFaint, fontSize: 13, padding: '24px 0'}}>
-          No entries yet — write your first one above 🌿
-        </div>
-      )}
-      {entries.map((e, i) => (
-        <div key={e.id || i} className="journal-entry">
-          <div className="je-header">
-            <div className="je-time">{fmtTime(e.created_at)}</div>
-            <div className="je-mood">{e.mood || '💚'}</div>
-          </div>
-          <div className="je-text">{e.text}</div>
-          {e.tags && e.tags.length > 0 && (
-            <div className="je-tags">
-              {e.tags.map((t, j) => <span key={j} className="je-tag"># {t}</span>)}
+      {/* Editor */}
+      <div style={{flex:1, display:'flex', flexDirection:'column',
+        ...(mobileView === 'list' ? {display:'none'} : {})}}>
+        {activeNote ? (
+          <>
+            {/* Editor toolbar */}
+            <div style={{padding:'12px 20px', borderBottom:'1px solid var(--border-soft)',
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+              background:'var(--white)'}}>
+              {/* Mobile back button */}
+              <div onClick={() => setMobileView('list')}
+                style={{fontSize:11, color:'var(--green-mid)', cursor:'pointer',
+                  fontFamily:"'Outfit',sans-serif", fontWeight:500,
+                  display:'flex', alignItems:'center', gap:4}}>
+                ‹ Notes
+              </div>
+              <div style={{fontSize:10, color:'var(--ink-faint)', fontFamily:"'Outfit',sans-serif"}}>
+                {saving ? 'Saving…' : `Edited ${fmtDate(activeNote.created_at)}`}
+              </div>
+              <div onClick={() => deleteNote(activeNote.id)}
+                style={{fontSize:11, color:'#c97c5d', cursor:'pointer',
+                  fontFamily:"'Outfit',sans-serif", padding:'4px 8px',
+                  borderRadius:6, border:'1px solid #c97c5d20', background:'#c97c5d08'}}>
+                Delete
+              </div>
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Textarea */}
+            <textarea
+              value={activeNote.text}
+              onChange={e => updateNote(activeNote.id, e.target.value)}
+              placeholder={"Start writing…\n\nYour notes are saved automatically."}
+              style={{flex:1, padding:'20px 24px', border:'none', outline:'none', resize:'none',
+                fontSize:14, lineHeight:1.8, color:'var(--ink)',
+                fontFamily:"'Cormorant Garamond',serif", fontWeight:300,
+                background:'var(--white)', letterSpacing:0.2}}
+            />
+          </>
+        ) : (
+          <div style={{flex:1, display:'flex', flexDirection:'column',
+            alignItems:'center', justifyContent:'center', color:'var(--ink-faint)'}}>
+            <div style={{fontSize:40, marginBottom:14}}>📝</div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif", fontSize:18,
+              color:'var(--ink-mid)', marginBottom:8}}>Select a note</div>
+            <div style={{fontSize:12, fontFamily:"'Outfit',sans-serif", marginBottom:20}}>
+              or create a new one
+            </div>
+            <div onClick={newNote}
+              style={{padding:'9px 22px', borderRadius:20, background:'var(--green-deep)',
+                color:'white', fontSize:12, cursor:'pointer', fontFamily:"'Outfit',sans-serif",
+                fontWeight:500}}>
+              + New Note
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: always show both panels */}
+      <style>{`
+        @media (min-width: 641px) {
+          .notes-sidebar { display: flex !important; }
+          .notes-editor  { display: flex !important; }
+        }
+        @media (max-width: 640px) {
+          .notes-back { display: flex !important; }
+        }
+      `}</style>
     </div>
   );
 };
@@ -1793,190 +1924,338 @@ const fmtTime = (d) => d ? d.toLocaleTimeString('en-AU', {hour:'2-digit', minute
 
 // =================== SCHEDULE ===================
 const Schedule = () => {
-  const [events, setEvents]   = useState([]);
+  const [outlookEvents, setOutlookEvents] = useState([]);
+  const [manualEvents, setManualEvents]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [lastSync, setLastSync] = useState(null);
+  const [viewMode, setViewMode] = useState('month'); // 'month' | 'day'
+  const [calMonth, setCalMonth] = useState(new Date());
+  const [showAdd, setShowAdd] = useState(false);
+  const [newEvt, setNewEvt] = useState({title:'', date:'', time:'12:00', endTime:'13:00', note:''});
+
+  const today = new Date();
 
   const loadCalendar = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const res = await fetch('/api/calendar');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      const parsed = parseICS(text);
-      setEvents(parsed);
+      setOutlookEvents(parseICS(text));
       setLastSync(new Date());
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch(e) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { loadCalendar(); }, []);
 
-  const isSameDay = (a, b) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  const isSameDay = (a,b) =>
+    a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
 
-  const todayEvents = events.filter(e => e.start && isSameDay(e.start, selectedDay));
-  const selectedEvents = events.filter(e => e.start && isSameDay(e.start, selectedDay));
+  const allEvents = [
+    ...outlookEvents,
+    ...manualEvents.map(e => ({
+      ...e,
+      start: new Date(e.startISO),
+      end:   new Date(e.endISO),
+      isManual: true,
+    }))
+  ].sort((a,b) => a.start - b.start);
 
-  // Build mini week strip
-  const weekDays = Array.from({length:7}, (_,i) => {
-    const d = new Date(selectedDay);
-    d.setDate(d.getDate() - d.getDay() + i + 1); // Mon–Sun
-    return d;
-  });
-  const dayLabels = ['M','T','W','T','F','S','S'];
-  const today = new Date();
+  const dayEvents = allEvents.filter(e => e.start && isSameDay(e.start, selectedDay));
 
-  const catColor = (summary='') => {
+  const catColor = (summary='', isManual=false) => {
+    if (isManual) return '#c97c5d';
     const s = summary.toLowerCase();
-    if (s.includes('meet') || s.includes('call') || s.includes('sync')) return '#5a7a9e';
-    if (s.includes('lunch') || s.includes('coffee') || s.includes('dinner')) return '#9e7a5a';
-    if (s.includes('review') || s.includes('report') || s.includes('debrief')) return '#6a5a9e';
-    if (s.includes('training') || s.includes('yoga') || s.includes('gym')) return '#53976F';
+    if (s.includes('meet')||s.includes('call')||s.includes('sync')) return '#5a7a9e';
+    if (s.includes('lunch')||s.includes('coffee')||s.includes('dinner')) return '#9e7a5a';
+    if (s.includes('review')||s.includes('report')) return '#6a5a9e';
+    if (s.includes('training')||s.includes('yoga')||s.includes('gym')) return '#53976F';
     return '#3D8A5F';
   };
 
-  return (
-    <div>
-      {/* Week strip */}
-      <div style={{display:'flex',gap:6,marginBottom:20,padding:'14px 16px',
-        background:'var(--white)',border:'1px solid var(--border-soft)',borderRadius:16,
-        boxShadow:'var(--shadow-sm)'}}>
-        {weekDays.map((d,i) => {
-          const isToday = isSameDay(d, today);
-          const isSel   = isSameDay(d, selectedDay);
-          const hasEvt  = events.some(e => e.start && isSameDay(e.start, d));
-          return (
-            <div key={i} onClick={()=>setSelectedDay(new Date(d))}
-              style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:4,
-                padding:'8px 0',borderRadius:12,cursor:'pointer',
-                background: isSel ? 'var(--green-deep)' : isToday ? 'var(--green-wash)' : 'transparent',
-                transition:'all 0.15s'}}>
-              <div style={{fontSize:9,fontFamily:"'Outfit',sans-serif",fontWeight:500,letterSpacing:0.5,
-                color: isSel ? 'rgba(255,255,255,0.7)' : 'var(--ink-faint)'}}>{dayLabels[i]}</div>
-              <div style={{fontSize:14,fontFamily:"'Cormorant Garamond',serif",fontWeight:400,
-                color: isSel ? '#fff' : isToday ? 'var(--green-deep)' : 'var(--ink)'}}>{d.getDate()}</div>
-              {hasEvt && <div style={{width:4,height:4,borderRadius:2,
-                background: isSel ? 'rgba(255,255,255,0.6)' : 'var(--green-mid)'}}/>}
-            </div>
-          );
-        })}
-      </div>
+  const addManualEvent = () => {
+    if (!newEvt.title.trim() || !newEvt.date) return;
+    const startISO = `${newEvt.date}T${newEvt.time}:00`;
+    const endISO   = `${newEvt.date}T${newEvt.endTime}:00`;
+    setManualEvents(prev => [...prev, {
+      id: Date.now(),
+      summary: newEvt.title,
+      location: newEvt.note,
+      startISO, endISO,
+    }]);
+    setShowAdd(false);
+    setNewEvt({title:'', date:'', time:'12:00', endTime:'13:00', note:''});
+    // Jump to that day
+    setSelectedDay(new Date(startISO));
+    setViewMode('day');
+  };
 
-      {/* Header row */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-        <div>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:17,color:'var(--ink)'}}>
-            {isSameDay(selectedDay, today) ? 'Today' :
-              selectedDay.toLocaleDateString('en-AU', {weekday:'long', month:'short', day:'numeric'})}
-          </div>
-          <div style={{fontSize:10,color:'var(--ink-faint)',marginTop:2,fontFamily:"'Outfit',sans-serif"}}>
-            {selectedEvents.length} event{selectedEvents.length!==1?'s':''}
-            {lastSync && ` · synced ${lastSync.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}`}
-          </div>
-        </div>
-        <div onClick={loadCalendar}
-          style={{width:32,height:32,borderRadius:10,background:'var(--green-wash)',
-            border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'center',
-            cursor:'pointer',fontSize:14,transition:'all 0.15s'}}
-          title="Refresh">
-          {loading ? '⟳' : '↻'}
-        </div>
-      </div>
+  // ── Month calendar grid ──
+  const renderMonth = () => {
+    const yr = calMonth.getFullYear(), mo = calMonth.getMonth();
+    const firstDay = new Date(yr, mo, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(yr, mo+1, 0).getDate();
+    const startOffset = (firstDay + 6) % 7; // shift so Mon=0
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(yr, mo, d));
 
-      {/* States */}
-      {loading && (
-        <div style={{textAlign:'center',padding:'40px 0'}}>
-          <div style={{fontSize:24,marginBottom:10,animation:'spin 1s linear infinite',display:'inline-block'}}>⟳</div>
-          <div style={{fontSize:12,color:'var(--ink-faint)',fontFamily:"'Outfit',sans-serif"}}>Syncing Outlook calendar…</div>
-        </div>
-      )}
-
-      {error && !loading && (
-        <div style={{padding:'20px',background:'#FFF8F8',border:'1px solid #FFCDD2',borderRadius:14,
-          textAlign:'center',marginBottom:16}}>
-          <div style={{fontSize:20,marginBottom:8}}>⚠️</div>
-          <div style={{fontSize:12,color:'#c97c5d',marginBottom:12,fontFamily:"'Outfit',sans-serif"}}>
-            Could not connect to Outlook calendar
+    return (
+      <div>
+        {/* Month nav */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+          <div onClick={()=>setCalMonth(new Date(yr, mo-1, 1))}
+            style={{width:32,height:32,borderRadius:9,background:'var(--green-wash)',
+              border:'1px solid var(--border)',display:'flex',alignItems:'center',
+              justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ink-soft)'}}>‹</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,color:'var(--ink)',fontWeight:400}}>
+            {calMonth.toLocaleDateString('en-AU',{month:'long',year:'numeric'})}
           </div>
-          <div style={{fontSize:10,color:'var(--ink-faint)',marginBottom:12,fontFamily:"'Outfit',sans-serif"}}>{error}</div>
-          <div onClick={loadCalendar}
-            style={{display:'inline-flex',padding:'8px 20px',borderRadius:20,
-              background:'var(--green-deep)',color:'#fff',fontSize:12,cursor:'pointer',
-              fontFamily:"'Outfit',sans-serif",fontWeight:500}}>
-            Try Again
-          </div>
+          <div onClick={()=>setCalMonth(new Date(yr, mo+1, 1))}
+            style={{width:32,height:32,borderRadius:9,background:'var(--green-wash)',
+              border:'1px solid var(--border)',display:'flex',alignItems:'center',
+              justifyContent:'center',cursor:'pointer',fontSize:14,color:'var(--ink-soft)'}}>›</div>
         </div>
-      )}
 
-      {!loading && !error && selectedEvents.length === 0 && (
-        <div style={{textAlign:'center',padding:'40px 20px',color:'var(--ink-faint)'}}>
-          <div style={{fontSize:32,marginBottom:10}}>🌿</div>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:16,marginBottom:6,color:'var(--ink-mid)'}}>
-            No events scheduled
-          </div>
-          <div style={{fontSize:11,fontFamily:"'Outfit',sans-serif"}}>Enjoy your free day ✨</div>
+        {/* Day headers */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3,marginBottom:3}}>
+          {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d=>(
+            <div key={d} style={{textAlign:'center',fontSize:9,color:'var(--ink-faint)',
+              padding:'4px 0',fontFamily:"'Outfit',sans-serif",fontWeight:600,letterSpacing:0.5}}>{d}</div>
+          ))}
         </div>
-      )}
 
-      {/* Event list */}
-      {!loading && !error && (
-        <div style={{display:'flex',flexDirection:'column',gap:8}}>
-          {selectedEvents.map((evt, i) => {
-            const color = catColor(evt.summary);
+        {/* Day cells */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3}}>
+          {cells.map((d,i) => {
+            if (!d) return <div key={`e${i}`}/>;
+            const isToday  = isSameDay(d, today);
+            const isSel    = isSameDay(d, selectedDay);
+            const evts     = allEvents.filter(e => e.start && isSameDay(e.start, d));
+            const dots     = evts.slice(0,3);
             return (
-              <div key={i} style={{display:'flex',gap:12,padding:'13px 15px',
-                background:'var(--white)',border:'1px solid var(--border-soft)',
-                borderRadius:14,borderLeft:`3px solid ${color}`,
-                boxShadow:'var(--shadow-sm)',transition:'all 0.15s'}}>
-                <div style={{minWidth:52,paddingTop:2}}>
-                  <div style={{fontSize:12,fontWeight:500,color:'var(--ink)',fontFamily:"'Outfit',sans-serif"}}>
-                    {fmtTime(evt.start)}
-                  </div>
-                  {evt.end && <div style={{fontSize:10,color:'var(--ink-faint)',marginTop:2,fontFamily:"'Outfit',sans-serif"}}>
-                    {fmtTime(evt.end)}
-                  </div>}
+              <div key={i} onClick={()=>{ setSelectedDay(new Date(d)); setViewMode('day'); }}
+                style={{aspectRatio:'1',display:'flex',flexDirection:'column',
+                  alignItems:'center',justifyContent:'center',borderRadius:10,
+                  cursor:'pointer',position:'relative',gap:2,
+                  background: isSel ? 'var(--green-deep)' : isToday ? 'var(--green-wash)' : 'transparent',
+                  border: isToday && !isSel ? '1px solid var(--green-light)' : '1px solid transparent',
+                  transition:'all 0.12s'}}>
+                <div style={{fontSize:12,fontFamily:"'Outfit',sans-serif",
+                  color: isSel ? 'white' : isToday ? 'var(--green-deep)' : 'var(--ink)',
+                  fontWeight: isToday||isSel ? 600 : 400}}>
+                  {d.getDate()}
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,fontWeight:500,color:'var(--ink)',
-                    whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                    fontFamily:"'Outfit',sans-serif",marginBottom:3}}>
-                    {evt.summary}
+                {dots.length > 0 && (
+                  <div style={{display:'flex',gap:2}}>
+                    {dots.map((e,j)=>(
+                      <div key={j} style={{width:4,height:4,borderRadius:2,
+                        background: isSel ? 'rgba(255,255,255,0.7)' : catColor(e.summary, e.isManual)}}/>
+                    ))}
                   </div>
-                  {evt.location && (
-                    <div style={{fontSize:10,color:'var(--ink-soft)',display:'flex',alignItems:'center',gap:4,
-                      fontFamily:"'Outfit',sans-serif"}}>
-                      📍 {evt.location}
-                    </div>
-                  )}
-                  {evt.description && !evt.location && (
-                    <div style={{fontSize:10,color:'var(--ink-faint)',
-                      whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',
-                      fontFamily:"'Outfit',sans-serif"}}>
-                      {evt.description.slice(0,80)}
-                    </div>
-                  )}
-                </div>
-                <div style={{width:8,height:8,borderRadius:4,background:color,
-                  marginTop:5,flexShrink:0}}/>
+                )}
               </div>
             );
           })}
         </div>
+      </div>
+    );
+  };
+
+  // ── Day view ──
+  const renderDay = () => (
+    <div>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+        <div onClick={()=>setViewMode('month')}
+          style={{fontSize:11,color:'var(--green-mid)',cursor:'pointer',
+            fontFamily:"'Outfit',sans-serif",fontWeight:500,
+            display:'flex',alignItems:'center',gap:3}}>
+          ‹ Calendar
+        </div>
+        <div style={{flex:1,textAlign:'center',fontFamily:"'Cormorant Garamond',serif",
+          fontSize:17,color:'var(--ink)'}}>
+          {isSameDay(selectedDay,today) ? 'Today' :
+            selectedDay.toLocaleDateString('en-AU',{weekday:'long',month:'short',day:'numeric'})}
+        </div>
+        <div style={{fontSize:10,color:'var(--ink-faint)',fontFamily:"'Outfit',sans-serif"}}>
+          {dayEvents.length} event{dayEvents.length!==1?'s':''}
+        </div>
+      </div>
+
+      {dayEvents.length === 0 && !loading && (
+        <div style={{textAlign:'center',padding:'40px 20px',color:'var(--ink-faint)'}}>
+          <div style={{fontSize:28,marginBottom:8}}>🌿</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:15,color:'var(--ink-mid)',marginBottom:4}}>
+            No events
+          </div>
+          <div style={{fontSize:11,fontFamily:"'Outfit',sans-serif"}}>Tap + to add one</div>
+        </div>
       )}
 
-      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {dayEvents.map((evt,i) => {
+          const color = catColor(evt.summary, evt.isManual);
+          return (
+            <div key={i} style={{display:'flex',gap:12,padding:'13px 15px',
+              background:'var(--white)',border:'1px solid var(--border-soft)',
+              borderRadius:14,borderLeft:`3px solid ${color}`,
+              boxShadow:'var(--shadow-sm)'}}>
+              <div style={{minWidth:52,paddingTop:2}}>
+                <div style={{fontSize:12,fontWeight:500,color:'var(--ink)',fontFamily:"'Outfit',sans-serif"}}>
+                  {fmtTime(evt.start)}
+                </div>
+                {evt.end && <div style={{fontSize:10,color:'var(--ink-faint)',marginTop:1,fontFamily:"'Outfit',sans-serif"}}>
+                  {fmtTime(evt.end)}
+                </div>}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:500,color:'var(--ink)',
+                  fontFamily:"'Outfit',sans-serif",marginBottom:3,
+                  display:'flex',alignItems:'center',gap:6}}>
+                  {evt.summary}
+                  {evt.isManual && <span style={{fontSize:9,padding:'1px 6px',borderRadius:8,
+                    background:'#c97c5d15',color:'#c97c5d',border:'1px solid #c97c5d30',
+                    fontWeight:500}}>Personal</span>}
+                </div>
+                {evt.location && <div style={{fontSize:10,color:'var(--ink-soft)',
+                  fontFamily:"'Outfit',sans-serif"}}>📍 {evt.location}</div>}
+              </div>
+              {evt.isManual && (
+                <div onClick={()=>setManualEvents(prev=>prev.filter(e=>e.id!==evt.id))}
+                  style={{fontSize:15,color:'var(--ink-faint)',cursor:'pointer',
+                    alignSelf:'center',padding:'0 4px'}}>×</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Add event modal */}
+      {showAdd && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:200,
+          display:'flex',alignItems:'center',justifyContent:'center',padding:20}}
+          onClick={()=>setShowAdd(false)}>
+          <div style={{background:'var(--white)',borderRadius:22,padding:24,width:'100%',maxWidth:340,
+            boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:20,marginBottom:18,
+              color:'var(--ink)',fontWeight:400}}>
+              Add Personal Event
+            </div>
+            <input placeholder="Event title *" value={newEvt.title}
+              onChange={e=>setNewEvt({...newEvt,title:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid var(--border)',
+                borderRadius:11,fontSize:13,marginBottom:10,outline:'none',
+                color:'var(--ink)',background:'var(--green-wash)',fontFamily:"'Outfit',sans-serif"}}/>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,color:'var(--ink-faint)',marginBottom:5,
+                fontFamily:"'Outfit',sans-serif",letterSpacing:1,textTransform:'uppercase'}}>Date</div>
+              <input type="date" value={newEvt.date}
+                onChange={e=>setNewEvt({...newEvt,date:e.target.value})}
+                style={{width:'100%',padding:'10px 14px',border:'1px solid var(--border)',
+                  borderRadius:11,fontSize:13,outline:'none',
+                  color:'var(--ink)',background:'var(--green-wash)',fontFamily:"'Outfit',sans-serif"}}/>
+            </div>
+            <div style={{display:'flex',gap:10,marginBottom:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'var(--ink-faint)',marginBottom:5,
+                  fontFamily:"'Outfit',sans-serif",letterSpacing:1,textTransform:'uppercase'}}>Start</div>
+                <input type="time" value={newEvt.time}
+                  onChange={e=>setNewEvt({...newEvt,time:e.target.value})}
+                  style={{width:'100%',padding:'10px 12px',border:'1px solid var(--border)',
+                    borderRadius:11,fontSize:13,outline:'none',
+                    color:'var(--ink)',background:'var(--green-wash)',fontFamily:"'Outfit',sans-serif"}}/>
+              </div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:'var(--ink-faint)',marginBottom:5,
+                  fontFamily:"'Outfit',sans-serif",letterSpacing:1,textTransform:'uppercase'}}>End</div>
+                <input type="time" value={newEvt.endTime}
+                  onChange={e=>setNewEvt({...newEvt,endTime:e.target.value})}
+                  style={{width:'100%',padding:'10px 12px',border:'1px solid var(--border)',
+                    borderRadius:11,fontSize:13,outline:'none',
+                    color:'var(--ink)',background:'var(--green-wash)',fontFamily:"'Outfit',sans-serif"}}/>
+              </div>
+            </div>
+            <input placeholder="Note / Location (optional)" value={newEvt.note}
+              onChange={e=>setNewEvt({...newEvt,note:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid var(--border)',
+                borderRadius:11,fontSize:13,marginBottom:18,outline:'none',
+                color:'var(--ink)',background:'var(--green-wash)',fontFamily:"'Outfit',sans-serif"}}/>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>setShowAdd(false)}
+                style={{flex:1,padding:'11px',borderRadius:12,border:'1px solid var(--border)',
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'var(--ink-soft)',
+                  fontFamily:"'Outfit',sans-serif"}}>Cancel</div>
+              <div onClick={addManualEvent}
+                style={{flex:1,padding:'11px',borderRadius:12,background:'var(--green-deep)',
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',
+                  fontWeight:500,fontFamily:"'Outfit',sans-serif"}}>Add ✓</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:18}}>
+        <div style={{display:'flex',gap:4,background:'var(--green-wash)',borderRadius:10,padding:3}}>
+          {['month','day'].map(m=>(
+            <div key={m} onClick={()=>setViewMode(m)}
+              style={{padding:'6px 14px',borderRadius:8,fontSize:11,cursor:'pointer',
+                fontFamily:"'Outfit',sans-serif",fontWeight:500,
+                background:viewMode===m?'var(--white)':'transparent',
+                color:viewMode===m?'var(--green-deep)':'var(--ink-soft)',
+                boxShadow:viewMode===m?'0 1px 4px rgba(30,92,53,0.1)':'none',
+                transition:'all 0.15s',textTransform:'capitalize'}}>
+              {m}
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          {lastSync && <div style={{fontSize:9.5,color:'var(--ink-faint)',fontFamily:"'Outfit',sans-serif"}}>
+            ↻ {lastSync.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}
+          </div>}
+          <div onClick={()=>setShowAdd(true)}
+            style={{padding:'7px 14px',borderRadius:20,background:'var(--green-deep)',
+              color:'white',fontSize:11,cursor:'pointer',fontFamily:"'Outfit',sans-serif",
+              fontWeight:500,display:'flex',alignItems:'center',gap:5}}>
+            + Add
+          </div>
+          <div onClick={loadCalendar}
+            style={{width:32,height:32,borderRadius:10,background:'var(--green-wash)',
+              border:'1px solid var(--border)',display:'flex',alignItems:'center',
+              justifyContent:'center',cursor:'pointer',fontSize:14,
+              animation:loading?'spin 1s linear infinite':undefined}}>
+            ↻
+          </div>
+        </div>
+      </div>
+
+      {error && !loading && (
+        <div style={{padding:'14px 16px',background:'#FFF8F8',border:'1px solid #FFCDD2',
+          borderRadius:12,marginBottom:16,fontSize:12,color:'#c97c5d',
+          fontFamily:"'Outfit',sans-serif",display:'flex',alignItems:'center',gap:8}}>
+          ⚠️ Outlook sync failed — showing personal events only
+          <div onClick={loadCalendar} style={{marginLeft:'auto',cursor:'pointer',
+            color:'var(--green-mid)',fontWeight:500}}>Retry</div>
+        </div>
+      )}
+
+      <div className="card">
+        {viewMode === 'month' ? renderMonth() : renderDay()}
+      </div>
+
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 };
+
+
 
 // =================== EXPRESSION STUDIO ===================
 const Speak = () => {
@@ -2575,7 +2854,7 @@ const Splash = ({onDone}) => {
 // =================== MAIN ===================
 const NAV = [
   {id:'schedule',icon:'◷',  label:'Schedule'},
-  {id:'journal', icon:'✍️', label:'Journal'},
+  {id:'journal', icon:'📝', label:'Notes'},
   {id:'calendar',icon:'📅', label:'Calendar'},
   {id:'fitness', icon:'💪', label:'Fitness'},
   {id:'reading', icon:'📚', label:'Reading'},
@@ -2585,7 +2864,7 @@ const NAV = [
 
 const titles = {
   schedule: {t:'Good morning, Nikki ✨', s:'Your Outlook calendar · live sync'},
-  journal:  {t:'Journal',                s:'Capture your thoughts, one line at a time'},
+  journal:  {t:'Notes',  s:'Your personal notebook'},
   calendar: {t:'Calendar & Events',      s:'Birthdays · Anniversaries · Health'},
   fitness:  {t:'Daily Fitness',          s:'Your workout tracker'},
   reading:  {t:'Reading & Listening',    s:'WeChat Books · Apple Podcasts'},
@@ -2605,7 +2884,7 @@ export default function App() {
 
   const MOBILE_NAV = [
     {id:'schedule',icon:'◷',  label:'Schedule'},
-    {id:'journal', icon:'✍️', label:'Journal'},
+    {id:'journal', icon:'📝', label:'Notes'},
     {id:'speak',   icon:'🎙', label:'Speak'},
     {id:'more',    icon:'☰',  label:'Menu'},
   ];
@@ -2617,7 +2896,7 @@ export default function App() {
     {id:'travel',   icon:'✈️', label:'Travel'},
     {id:'home',     icon:'⊞',  label:'Home'},
     {id:'schedule', icon:'◷',  label:'Schedule'},
-    {id:'journal',  icon:'✍️', label:'Journal'},
+    {id:'journal', icon:'📝', label:'Notes'},
     {id:'speak',    icon:'🎙', label:'Speak'},
   ];
 
@@ -2626,7 +2905,7 @@ export default function App() {
   const renderPage = () => {
     switch(view) {
       case 'schedule': return <div className="card fu"><Schedule/></div>;
-      case 'journal': return <div className="fu"><Journal/></div>;
+      case 'journal': return <div className="fu"><Notes/></div>;
       case 'calendar': return <div className="g2 fu"><div className="card"><div className="card-label"><span>📅</span>Calendar</div><Cal/></div><div className="card"><div className="card-label"><span>🌸</span>Cycle Tracker</div><Period/></div></div>;
       case 'fitness': return <div className="card fu"><div className="card-label"><span>🏋️</span>Today's Workout</div><Fitness/></div>;
       case 'reading': return <div className="card fu"><Reading/></div>;
