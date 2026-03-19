@@ -836,16 +836,19 @@ const VerdeLogo = ({ size = 44 }) => (
 
 // =================== CALENDAR ===================
 const Cal = () => {
-  const [month, setMonth] = useState(new Date(2026, 2, 1));
-  const [events, setEvents] = useState([
-    {day:15, name:"Mom's Birthday", color:'#c97c5d', type:'Birthday'},
-    {day:18, name:'Anniversary', color:'#4A9B6F', type:'Special'},
-    {day:22, name:"Friend Lily's Birthday", color:'#c97c5d', type:'Birthday'},
-    {day:10, name:'Period Expected', color:'#9b72cf', type:'Health'},
-  ]);
+  const [month, setMonth] = useState(new Date());
+  const [events, setEvents] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [selDay, setSelDay] = useState(null);
   const [form, setForm] = useState({name:'', type:'Special', color:'#4A9B6F'});
+  const typeColors = {Birthday:'#c97c5d', Special:'#4A9B6F', Health:'#9b72cf', Reminder:'#5a7a9e'};
+
+  useEffect(() => { loadEvents(); }, []);
+
+  const loadEvents = async () => {
+    const { data } = await supabase.from('important_dates').select('*').eq('user_id','nikki').order('date');
+    if (data) setEvents(data);
+  };
 
   const dim = new Date(month.getFullYear(), month.getMonth()+1, 0).getDate();
   const first = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
@@ -855,11 +858,13 @@ const Cal = () => {
   for (let i=1;i<=dim;i++) days.push(i);
 
   const today = new Date();
-  const isToday = (d) => d === today.getDate() &&
-    month.getMonth() === today.getMonth() &&
-    month.getFullYear() === today.getFullYear();
+  const isToday = (d) => d === today.getDate() && month.getMonth() === today.getMonth() && month.getFullYear() === today.getFullYear();
 
-  const dayEvents = (d) => events.filter(e => e.day === d);
+  const dayEvents = (d) => events.filter(e => {
+    if (!e.date) return false;
+    const ed = new Date(e.date);
+    return ed.getDate() === d && ed.getMonth() === month.getMonth() && ed.getFullYear() === month.getFullYear();
+  });
 
   const handleDayClick = (d) => {
     if (!d) return;
@@ -868,17 +873,26 @@ const Cal = () => {
     setShowAdd(true);
   };
 
-  const addEvent = () => {
+  const addEvent = async () => {
     if (!form.name.trim()) return;
-    setEvents([...events, { day: selDay, ...form }]);
+    const yr = month.getFullYear(), mo = String(month.getMonth()+1).padStart(2,'0'), dd = String(selDay).padStart(2,'0');
+    const dateStr = `${yr}-${mo}-${dd}`;
+    const { data } = await supabase.from('important_dates').insert({
+      name: form.name, type: form.type, date: dateStr,
+      emoji: form.type==='Birthday'?'🎂':form.type==='Health'?'💜':'⭐',
+      user_id:'nikki'
+    }).select().single();
+    if (data) setEvents([...events, data]);
     setShowAdd(false);
   };
 
-  const typeColors = {Birthday:'#c97c5d', Special:'#4A9B6F', Health:'#9b72cf', Reminder:'#5a7a9e'};
+  const deleteEvent = async (id) => {
+    await supabase.from('important_dates').delete().eq('id', id);
+    setEvents(events.filter(e => e.id !== id));
+  };
 
   return (
     <div>
-      {/* Add event modal */}
       {showAdd && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
           onClick={()=>setShowAdd(false)}>
@@ -887,40 +901,30 @@ const Cal = () => {
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:16,color:'#1A2E1F'}}>
               Add Event · {mname.split(' ')[0]} {selDay}
             </div>
-            <input
-              placeholder="Event name"
-              value={form.name}
+            <input placeholder="Event name" value={form.name}
               onChange={e=>setForm({...form,name:e.target.value})}
               style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,
-                fontSize:13,marginBottom:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}
-            />
-            <div style={{display:'flex',gap:8,marginBottom:16}}>
+                fontSize:13,marginBottom:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
               {['Birthday','Special','Health','Reminder'].map(t=>(
                 <div key={t} onClick={()=>setForm({...form,type:t,color:typeColors[t]})}
                   style={{padding:'5px 10px',borderRadius:20,fontSize:10,cursor:'pointer',
                     background:form.type===t?typeColors[t]+'20':'#F7F9F7',
                     border:`1px solid ${form.type===t?typeColors[t]:'#E2EDE5'}`,
-                    color:form.type===t?typeColors[t]:'#8AAD95'}}>
-                  {t}
-                </div>
+                    color:form.type===t?typeColors[t]:'#8AAD95'}}>{t}</div>
               ))}
             </div>
             <div style={{display:'flex',gap:8}}>
               <div onClick={()=>setShowAdd(false)}
                 style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #E2EDE5',
-                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>
-                Cancel
-              </div>
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>Cancel</div>
               <div onClick={addEvent}
                 style={{flex:1,padding:'10px',borderRadius:12,background:'#2A6E3F',
-                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>
-                Add ✓
-              </div>
+                  textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>Add ✓</div>
             </div>
           </div>
         </div>
       )}
-
       <div className="cal-hdr">
         <div className="cal-month">{mname}</div>
         <div className="cal-nav">
@@ -933,15 +937,13 @@ const Cal = () => {
         {days.map((d,i)=>{
           const de = dayEvents(d);
           return (
-            <div key={i}
-              className={`cal-day ${!d?'dim':''} ${isToday(d)?'today':''}`}
-              onClick={()=>handleDayClick(d)}
-              style={{cursor:d?'pointer':'default', position:'relative'}}>
+            <div key={i} className={`cal-day ${!d?'dim':''} ${isToday(d)?'today':''}`}
+              onClick={()=>handleDayClick(d)} style={{cursor:d?'pointer':'default',position:'relative'}}>
               {d}
-              {de.length > 0 && (
+              {de.length>0 && (
                 <div style={{display:'flex',gap:2,position:'absolute',bottom:3,justifyContent:'center',width:'100%'}}>
                   {de.slice(0,3).map((e,j)=>(
-                    <div key={j} style={{width:4,height:4,borderRadius:'50%',background:e.color}}/>
+                    <div key={j} style={{width:4,height:4,borderRadius:'50%',background:typeColors[e.type]||'#4A9B6F'}}/>
                   ))}
                 </div>
               )}
@@ -951,21 +953,21 @@ const Cal = () => {
       </div>
       <div style={{marginTop:14}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
-          <div className="card-label" style={{marginBottom:0}}><span>🎂</span>Upcoming Dates</div>
-          <div onClick={()=>{setSelDay(1);setShowAdd(true);}}
-            style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500}}>+ Add Event</div>
+          <div className="card-label" style={{marginBottom:0}}><span>🎂</span>Important Dates</div>
+          <div onClick={()=>{setSelDay(today.getDate());setShowAdd(true);}}
+            style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500}}>+ Add</div>
         </div>
-        {events.sort((a,b)=>a.day-b.day).map((e,i)=>(
-          <div key={i} className="evt">
-            <div className="evt-dot" style={{background:e.color}}/>
+        {events.length===0 && <div style={{textAlign:'center',color:'#8AAD95',fontSize:12,padding:'16px 0'}}>No dates yet — click any day to add 🌿</div>}
+        {events.sort((a,b)=>new Date(a.date)-new Date(b.date)).map((e)=>(
+          <div key={e.id} className="evt">
+            <div className="evt-dot" style={{background:typeColors[e.type]||'#4A9B6F'}}/>
             <div style={{flex:1}}>
-              <div className="evt-name">{e.name}</div>
-              <div className="evt-date">{mname.split(' ')[0]} {e.day}</div>
+              <div className="evt-name">{e.emoji} {e.name}</div>
+              <div className="evt-date">{new Date(e.date+'T00:00:00').toLocaleDateString('en-AU',{month:'short',day:'numeric'})}</div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <div className="badge" style={{background:e.color+'20',color:e.color,border:`1px solid ${e.color}40`}}>{e.type}</div>
-              <div onClick={()=>setEvents(events.filter((_,j)=>j!==i))}
-                style={{fontSize:14,color:'#8AAD95',cursor:'pointer',padding:'0 4px'}}>×</div>
+              <div className="badge" style={{background:(typeColors[e.type]||'#4A9B6F')+'20',color:typeColors[e.type]||'#4A9B6F',border:`1px solid ${typeColors[e.type]||'#4A9B6F'}40`}}>{e.type}</div>
+              <div onClick={()=>deleteEvent(e.id)} style={{fontSize:14,color:'#8AAD95',cursor:'pointer',padding:'0 4px'}}>×</div>
             </div>
           </div>
         ))}
@@ -1271,66 +1273,89 @@ const Fitness = () => {
 // =================== READING ===================
 const Reading = () => {
   const [tab, setTab] = useState('book');
-  const [books, setBooks] = useState([
-    {id:1, title:'The Psychology of Money', author:'Morgan Housel', emoji:'💰', prog:68},
-    {id:2, title:'Atomic Habits', author:'James Clear', emoji:'⚡', prog:92},
-    {id:3, title:'Deep Work', author:'Cal Newport', emoji:'🎯', prog:31},
-  ]);
+  const [books, setBooks] = useState([]);
+  const [podcasts, setPodcasts] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddPod, setShowAddPod] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({title:'', author:'', emoji:'📖', prog:0});
+  const [form, setForm] = useState({title:'', author:'', emoji:'📖', progress:0});
+  const [podForm, setPodForm] = useState({title:'', show_name:'', emoji:'🎧', duration_minutes:0, notes:''});
 
-  const pods = [
-    {title:'Huberman Lab', ep:'Ep.183 · Sleep Optimization', emoji:'🎙', prog:45},
-    {title:'How I Built This', ep:'Ep.412 · Patagonia', emoji:'🏔', prog:72},
-    {title:'Tim Ferriss Show', ep:'Ep.678 · Naval Ravikant', emoji:'🎧', prog:20},
-  ];
+  useEffect(() => { loadBooks(); loadPodcasts(); }, []);
 
-  const openWeChat = () => {
-    window.location.href = 'weread://';
-    setTimeout(() => {
-      window.open('https://weread.qq.com', '_blank');
-    }, 800);
+  const loadBooks = async () => {
+    const { data } = await supabase.from('books').select('*').eq('user_id','nikki').order('created_at',{ascending:false});
+    if (data) setBooks(data);
   };
 
-  const saveBook = () => {
+  const loadPodcasts = async () => {
+    const { data } = await supabase.from('podcasts').select('*').eq('user_id','nikki').order('listened_at',{ascending:false});
+    if (data) setPodcasts(data);
+  };
+
+  const saveBook = async () => {
     if (!form.title.trim()) return;
     if (editId) {
-      setBooks(books.map(b => b.id === editId ? {...b, ...form} : b));
+      const { data } = await supabase.from('books').update({...form}).eq('id',editId).select().single();
+      if (data) setBooks(books.map(b => b.id===editId ? data : b));
       setEditId(null);
     } else {
-      setBooks([...books, {id: Date.now(), ...form}]);
+      const { data } = await supabase.from('books').insert({...form, user_id:'nikki'}).select().single();
+      if (data) setBooks([data, ...books]);
     }
-    setForm({title:'', author:'', emoji:'📖', prog:0});
+    setForm({title:'', author:'', emoji:'📖', progress:0});
     setShowAdd(false);
   };
 
+  const deleteBook = async (id) => {
+    await supabase.from('books').delete().eq('id',id);
+    setBooks(books.filter(b => b.id!==id));
+  };
+
+  const savePodcast = async () => {
+    if (!podForm.title.trim()) return;
+    const { data } = await supabase.from('podcasts').insert({...podForm, user_id:'nikki', listened_at: new Date().toISOString()}).select().single();
+    if (data) setPodcasts([data, ...podcasts]);
+    setPodForm({title:'', show_name:'', emoji:'🎧', duration_minutes:0, notes:''});
+    setShowAddPod(false);
+  };
+
+  const deletePodcast = async (id) => {
+    await supabase.from('podcasts').delete().eq('id',id);
+    setPodcasts(podcasts.filter(p => p.id!==id));
+  };
+
   const startEdit = (b) => {
-    setForm({title:b.title, author:b.author, emoji:b.emoji, prog:b.prog});
+    setForm({title:b.title, author:b.author||'', emoji:b.emoji||'📖', progress:b.progress||0});
     setEditId(b.id);
     setShowAdd(true);
   };
 
-  const emojis = ['📖','💰','⚡','🎯','🌿','🧠','💡','🔥','🌊','🌸','🏔','✨'];
+  const openWeChat = () => {
+    window.location.href = 'weread://';
+    setTimeout(() => window.open('https://weread.qq.com', '_blank'), 800);
+  };
+
+  const bookEmojis = ['📖','💰','⚡','🎯','🌿','🧠','💡','🔥','🌊','🌸','🏔','✨'];
+  const podEmojis  = ['🎧','🎙','📻','🎵','💼','🧬','🌍','💭','🔬','🏃'];
 
   return (
     <div>
+      {/* Add Book Modal */}
       {showAdd && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
           onClick={()=>{setShowAdd(false);setEditId(null);}}>
           <div style={{background:'#fff',borderRadius:20,padding:24,width:310,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}
             onClick={e=>e.stopPropagation()}>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:18,color:'#1A2E1F'}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:14,color:'#1A2E1F'}}>
               {editId ? 'Edit Book' : 'Add Book'}
             </div>
             <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
-              {emojis.map(em=>(
+              {bookEmojis.map(em=>(
                 <div key={em} onClick={()=>setForm({...form,emoji:em})}
                   style={{fontSize:20,cursor:'pointer',padding:4,borderRadius:8,
                     background:form.emoji===em?'#2A6E3F20':'transparent',
-                    border:`1px solid ${form.emoji===em?'#2A6E3F':'transparent'}`}}>
-                  {em}
-                </div>
+                    border:`1px solid ${form.emoji===em?'#2A6E3F':'transparent'}`}}>{em}</div>
               ))}
             </div>
             <input placeholder="Book title *" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}
@@ -1339,10 +1364,10 @@ const Reading = () => {
               style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:12,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
             <div style={{marginBottom:16}}>
               <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-                <div style={{fontSize:10,color:'#8AAD95'}}>Progress</div>
-                <div style={{fontSize:11,color:'#2A6E3F',fontWeight:500}}>{form.prog}%</div>
+                <div style={{fontSize:10,color:'#8AAD95'}}>Reading Progress</div>
+                <div style={{fontSize:11,color:'#2A6E3F',fontWeight:500}}>{form.progress}%</div>
               </div>
-              <input type="range" min="0" max="100" value={form.prog} onChange={e=>setForm({...form,prog:+e.target.value})}
+              <input type="range" min="0" max="100" value={form.progress} onChange={e=>setForm({...form,progress:+e.target.value})}
                 style={{width:'100%',accentColor:'#2A6E3F'}}/>
             </div>
             <div style={{display:'flex',gap:8}}>
@@ -1357,56 +1382,101 @@ const Reading = () => {
         </div>
       )}
 
+      {/* Add Podcast Modal */}
+      {showAddPod && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:100,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setShowAddPod(false)}>
+          <div style={{background:'#fff',borderRadius:20,padding:24,width:310,boxShadow:'0 20px 60px rgba(0,0,0,0.2)'}}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:18,marginBottom:14,color:'#1A2E1F'}}>Log Podcast</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+              {podEmojis.map(em=>(
+                <div key={em} onClick={()=>setPodForm({...podForm,emoji:em})}
+                  style={{fontSize:20,cursor:'pointer',padding:4,borderRadius:8,
+                    background:podForm.emoji===em?'#2A6E3F20':'transparent',
+                    border:`1px solid ${podForm.emoji===em?'#2A6E3F':'transparent'}`}}>{em}</div>
+              ))}
+            </div>
+            <input placeholder="Episode title *" value={podForm.title} onChange={e=>setPodForm({...podForm,title:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:10,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <input placeholder="Show name" value={podForm.show_name} onChange={e=>setPodForm({...podForm,show_name:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:10,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,color:'#8AAD95',marginBottom:5}}>Duration (minutes)</div>
+              <input type="number" min="0" value={podForm.duration_minutes} onChange={e=>setPodForm({...podForm,duration_minutes:+e.target.value})}
+                style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            </div>
+            <input placeholder="Notes (optional)" value={podForm.notes} onChange={e=>setPodForm({...podForm,notes:e.target.value})}
+              style={{width:'100%',padding:'10px 14px',border:'1px solid #E2EDE5',borderRadius:10,fontSize:13,marginBottom:16,outline:'none',color:'#1A2E1F',background:'#F7F9F7'}}/>
+            <div style={{display:'flex',gap:8}}>
+              <div onClick={()=>setShowAddPod(false)}
+                style={{flex:1,padding:'10px',borderRadius:12,border:'1px solid #E2EDE5',textAlign:'center',cursor:'pointer',fontSize:13,color:'#8AAD95'}}>Cancel</div>
+              <div onClick={savePodcast}
+                style={{flex:1,padding:'10px',borderRadius:12,background:'#2A6E3F',textAlign:'center',cursor:'pointer',fontSize:13,color:'#fff',fontWeight:500}}>Log ✓</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="tabs">
         <div className={`tab ${tab==='book'?'on':''}`} onClick={()=>setTab('book')}>📚 WeChat Books</div>
-        <div className={`tab ${tab==='pod'?'on':''}`} onClick={()=>setTab('pod')}>🎧 Apple Podcasts</div>
+        <div className={`tab ${tab==='pod'?'on':''}`} onClick={()=>setTab('pod')}>🎧 Podcasts</div>
       </div>
 
       {tab==='book' && <>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
-          <div className="card-label" style={{marginBottom:0}}><span>📖</span>Reading List</div>
+          <div className="card-label" style={{marginBottom:0}}><span>📖</span>My Books</div>
           <div onClick={()=>setShowAdd(true)}
             style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500,padding:'4px 10px',border:'1px solid #A8D5B5',borderRadius:20,background:'#F0F5F1'}}>+ Add Book</div>
         </div>
-        {books.map((b,i)=>(
+        {books.length===0 && <div style={{textAlign:'center',color:'#8AAD95',fontSize:12,padding:'20px 0'}}>No books yet — add your first one 📖</div>}
+        {books.map((b)=>(
           <div key={b.id} className="media-item">
             <div className="media-cov" style={{background:'#2A6E3F20'}}>{b.emoji}</div>
             <div style={{flex:1}}>
               <div className="media-title">{b.title}</div>
               <div className="media-sub">{b.author}</div>
-              <div className="media-prog"><div className="media-prog-fill" style={{width:`${b.prog}%`}}/></div>
+              <div className="media-prog"><div className="media-prog-fill" style={{width:`${b.progress||0}%`}}/></div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <span style={{fontSize:11,color:'#4A9B6F',fontWeight:600}}>{b.prog}%</span>
-              <div onClick={()=>startEdit(b)} style={{fontSize:12,color:'#8AAD95',cursor:'pointer',padding:'2px 6px'}}>✏️</div>
-              <div onClick={()=>setBooks(books.filter(x=>x.id!==b.id))} style={{fontSize:13,color:'#8AAD95',cursor:'pointer'}}>×</div>
+              <span style={{fontSize:11,color:'#4A9B6F',fontWeight:600}}>{b.progress||0}%</span>
+              <div onClick={()=>startEdit(b)} style={{fontSize:12,color:'#8AAD95',cursor:'pointer'}}>✏️</div>
+              <div onClick={()=>deleteBook(b.id)} style={{fontSize:13,color:'#8AAD95',cursor:'pointer'}}>×</div>
             </div>
           </div>
         ))}
-        <div style={{textAlign:'center',marginTop:8}}>
+        <div style={{textAlign:'center',marginTop:12}}>
           <div style={{padding:'10px 14px',background:'#F7F9F7',border:'1px solid #E2EDE5',borderRadius:12,marginBottom:10,fontSize:11,color:'#8AAD95',lineHeight:1.6}}>
-            📱 Progress below is manually tracked. Tap "Open WeChat Books" to sync your real reading progress, then update here.
+            📱 Open WeChat Books, then update progress manually here.
           </div>
-          <div className="open-btn" onClick={openWeChat}
-            style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
+          <div className="open-btn" onClick={openWeChat} style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
             📱 Open WeChat Books
           </div>
         </div>
       </>}
 
       {tab==='pod' && <>
-        {pods.map((p,i)=>(
-          <div key={i} className="media-item">
-            <div className="media-cov" style={{background:'#F0F5F1'}}>{p.emoji}</div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+          <div className="card-label" style={{marginBottom:0}}><span>🎧</span>Listening History</div>
+          <div onClick={()=>setShowAddPod(true)}
+            style={{fontSize:11,color:'#4A9B6F',cursor:'pointer',fontWeight:500,padding:'4px 10px',border:'1px solid #A8D5B5',borderRadius:20,background:'#F0F5F1'}}>+ Log Episode</div>
+        </div>
+        {podcasts.length===0 && <div style={{textAlign:'center',color:'#8AAD95',fontSize:12,padding:'20px 0'}}>No episodes logged yet 🎧</div>}
+        {podcasts.map((p)=>(
+          <div key={p.id} className="media-item">
+            <div className="media-cov" style={{background:'#F0F5F1'}}>{p.emoji||'🎧'}</div>
             <div style={{flex:1}}>
               <div className="media-title">{p.title}</div>
-              <div className="media-sub">{p.ep}</div>
-              <div className="media-prog"><div className="media-prog-fill" style={{width:`${p.prog}%`}}/></div>
+              <div className="media-sub">{p.show_name}{p.duration_minutes ? ` · ${p.duration_minutes} min` : ''}</div>
+              {p.notes && <div style={{fontSize:10,color:'#8AAD95',marginTop:3,fontStyle:'italic'}}>"{p.notes}"</div>}
             </div>
-            <div style={{width:30,height:30,borderRadius:'50%',background:'#2A6E3F',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,cursor:'pointer',color:'white'}}>▶</div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <div style={{fontSize:9,color:'#8AAD95'}}>{new Date(p.listened_at).toLocaleDateString('en-AU',{month:'short',day:'numeric'})}</div>
+              <div onClick={()=>deletePodcast(p.id)} style={{fontSize:13,color:'#8AAD95',cursor:'pointer'}}>×</div>
+            </div>
           </div>
         ))}
-        <div style={{textAlign:'center',marginTop:8}}>
+        <div style={{textAlign:'center',marginTop:12}}>
           <div className="open-btn" onClick={()=>window.open('podcast://','_blank')} style={{cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
             🎵 Open Apple Podcasts
           </div>
@@ -1449,33 +1519,32 @@ const Finance = () => (
 
 // =================== TRAVEL ===================
 const Travel = () => {
-  const [trips, setTrips] = useState([
-    {id:1, name:'Zhangjiajie', type:'Nature', date:'Apr 12–18', emoji:'⛰️', status:'Planning', notes:'Book cable car tickets'},
-    {id:2, name:'Wuyi Camping', type:'Camping', date:'May 3–5', emoji:'🏕️', status:'Confirmed', notes:'Campsite booked at site B3'},
-    {id:3, name:'Tokyo Trip', type:'City', date:'Jun 20–28', emoji:'🗾', status:'Dreaming', notes:''},
-    {id:4, name:'Sanya Beach', type:'Beach', date:'Aug 1–7', emoji:'🌊', status:'Planning', notes:''},
-  ]);
+  const [trips, setTrips] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editTrip, setEditTrip] = useState(null);
   const [showCamping, setShowCamping] = useState(false);
   const [form, setForm] = useState({name:'', type:'Nature', date:'', emoji:'🌍', status:'Dreaming', notes:''});
 
-  const [campingItems, setCampingItems] = useState([
-    {id:1, name:'Tent', cat:'Shelter', packed:true},
-    {id:2, name:'Sleeping bag', cat:'Shelter', packed:true},
-    {id:3, name:'Sleeping pad', cat:'Shelter', packed:false},
-    {id:4, name:'Headlamp + batteries', cat:'Lighting', packed:true},
-    {id:5, name:'Camp stove + fuel', cat:'Cooking', packed:false},
-    {id:6, name:'Cookware set', cat:'Cooking', packed:false},
-    {id:7, name:'Water filter', cat:'Water', packed:true},
-    {id:8, name:'First aid kit', cat:'Safety', packed:true},
-    {id:9, name:'Rain jacket', cat:'Clothing', packed:false},
-    {id:10, name:'Hiking boots', cat:'Clothing', packed:true},
-    {id:11, name:'Sunscreen SPF50', cat:'Personal', packed:false},
-    {id:12, name:'Insect repellent', cat:'Personal', packed:false},
-  ]);
+  const [campingItems, setCampingItems] = useState([]);
+  const [campingLoaded, setCampingLoaded] = useState(false);
   const [newGear, setNewGear] = useState('');
   const [newGearCat, setNewGearCat] = useState('Other');
+
+  const DEFAULT_CAMPING = [
+    {name:'Tent', cat:'Shelter', packed:true},
+    {name:'Sleeping bag', cat:'Shelter', packed:true},
+    {name:'Sleeping pad', cat:'Shelter', packed:false},
+    {name:'Headlamp + batteries', cat:'Lighting', packed:true},
+    {name:'Camp stove + fuel', cat:'Cooking', packed:false},
+    {name:'Cookware set', cat:'Cooking', packed:false},
+    {name:'Water filter', cat:'Water', packed:true},
+    {name:'First aid kit', cat:'Safety', packed:true},
+    {name:'Rain jacket', cat:'Clothing', packed:false},
+    {name:'Hiking boots', cat:'Clothing', packed:true},
+    {name:'Sunscreen SPF50', cat:'Personal', packed:false},
+    {name:'Insect repellent', cat:'Personal', packed:false},
+  ];
 
   const statusColors = {Planning:'#4A9B6F', Confirmed:'#2A6E3F', Dreaming:'#9b72cf'};
   const types = ['Nature','Camping','City','Beach','Mountain','Road Trip','Cultural'];
@@ -1485,6 +1554,37 @@ const Travel = () => {
 
   const packedCount = campingItems.filter(x=>x.packed).length;
 
+  useEffect(() => { loadTrips(); loadCamping(); }, []);
+
+  const loadTrips = async () => {
+    const { data } = await supabase.from('trips').select('*').eq('user_id','nikki').order('created_at',{ascending:false});
+    if (data) setTrips(data);
+    setLoaded(true);
+  };
+
+  const loadCamping = async () => {
+    const { data } = await supabase.from('camping_items').select('*').eq('user_id','nikki').order('created_at');
+    if (data && data.length > 0) {
+      setCampingItems(data);
+    } else {
+      // seed defaults
+      const toInsert = DEFAULT_CAMPING.map(i => ({...i, user_id:'nikki'}));
+      const { data: inserted } = await supabase.from('camping_items').insert(toInsert).select();
+      if (inserted) setCampingItems(inserted);
+    }
+    setCampingLoaded(true);
+  };
+
+  const togglePacked = async (item) => {
+    const { data } = await supabase.from('camping_items').update({packed:!item.packed}).eq('id',item.id).select().single();
+    if (data) setCampingItems(campingItems.map(x => x.id===item.id ? data : x));
+  };
+
+  const deleteCampingItem = async (id) => {
+    await supabase.from('camping_items').delete().eq('id',id);
+    setCampingItems(campingItems.filter(x => x.id!==id));
+  };
+
   const openAddTrip = () => {
     setEditTrip(null);
     setForm({name:'', type:'Nature', date:'', emoji:'🌍', status:'Dreaming', notes:''});
@@ -1493,24 +1593,34 @@ const Travel = () => {
 
   const openEditTrip = (t) => {
     setEditTrip(t.id);
-    setForm({name:t.name, type:t.type, date:t.date, emoji:t.emoji, status:t.status, notes:t.notes});
+    setForm({name:t.name, type:t.type, date:t.date, emoji:t.emoji, status:t.status, notes:t.notes||''});
     setShowAdd(true);
   };
 
-  const saveTrip = () => {
+  const saveTrip = async () => {
     if (!form.name.trim()) return;
     if (editTrip) {
-      setTrips(trips.map(t => t.id === editTrip ? {...t, ...form} : t));
+      const { data } = await supabase
+        .from('trips').update({...form}).eq('id', editTrip).select().single();
+      if (data) setTrips(trips.map(t => t.id === editTrip ? data : t));
     } else {
-      setTrips([...trips, {id:Date.now(), ...form}]);
+      const { data } = await supabase
+        .from('trips').insert({...form, user_id:'nikki'}).select().single();
+      if (data) setTrips([data, ...trips]);
     }
     setShowAdd(false);
     setEditTrip(null);
   };
 
-  const addGear = () => {
+  const deleteTrip = async (id) => {
+    await supabase.from('trips').delete().eq('id', id);
+    setTrips(trips.filter(t => t.id !== id));
+  };
+
+  const addGear = async () => {
     if (!newGear.trim()) return;
-    setCampingItems([...campingItems, {id:Date.now(), name:newGear, cat:newGearCat, packed:false}]);
+    const { data } = await supabase.from('camping_items').insert({name:newGear, cat:newGearCat, packed:false, user_id:'nikki'}).select().single();
+    if (data) setCampingItems([...campingItems, data]);
     setNewGear('');
   };
 
@@ -1593,13 +1703,13 @@ const Travel = () => {
                 <div style={{fontSize:9,color:'#8AAD95',letterSpacing:1.5,textTransform:'uppercase',marginBottom:6}}>{cat}</div>
                 {campingItems.filter(i=>i.cat===cat).map(item=>(
                   <div key={item.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F0F5F1'}}>
-                    <div onClick={()=>setCampingItems(campingItems.map(x=>x.id===item.id?{...x,packed:!x.packed}:x))}
+                    <div onClick={()=>togglePacked(item)}
                       style={{width:20,height:20,borderRadius:6,border:`2px solid ${item.packed?'#2A6E3F':'#E2EDE5'}`,
                         background:item.packed?'#2A6E3F':'transparent',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',flexShrink:0}}>
                       {item.packed&&<span style={{color:'white',fontSize:10}}>✓</span>}
                     </div>
                     <div style={{flex:1,fontSize:13,color:item.packed?'#8AAD95':'#1A2E1F',textDecoration:item.packed?'line-through':'none'}}>{item.name}</div>
-                    <div onClick={()=>setCampingItems(campingItems.filter(x=>x.id!==item.id))}
+                    <div onClick={()=>deleteCampingItem(item.id)}
                       style={{fontSize:13,color:'#8AAD95',cursor:'pointer',padding:'0 4px'}}>×</div>
                   </div>
                 ))}
@@ -1633,7 +1743,7 @@ const Travel = () => {
           <div key={t.id} className="trip-card" style={{position:'relative'}}>
             <div style={{position:'absolute',top:8,right:8,display:'flex',gap:4}}>
               <div onClick={()=>openEditTrip(t)} style={{fontSize:12,cursor:'pointer',opacity:0.5}}>✏️</div>
-              <div onClick={()=>setTrips(trips.filter(x=>x.id!==t.id))} style={{fontSize:13,color:'#8AAD95',cursor:'pointer',lineHeight:1}}>×</div>
+              <div onClick={()=>deleteTrip(t.id)} style={{fontSize:13,color:'#8AAD95',cursor:'pointer',lineHeight:1}}>×</div>
             </div>
             <div className="trip-emoji">{t.emoji}</div>
             <div className="trip-name">{t.name}</div>
@@ -1924,7 +2034,7 @@ const Schedule = () => {
   const [error, setError]     = useState(null);
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [lastSync, setLastSync] = useState(null);
-  const [viewMode, setViewMode] = useState('month'); // 'month' | 'day'
+  const [viewMode, setViewMode] = useState('month');
   const [calMonth, setCalMonth] = useState(new Date());
   const [showAdd, setShowAdd] = useState(false);
   const [newEvt, setNewEvt] = useState({title:'', date:'', time:'12:00', endTime:'13:00', note:''});
@@ -1943,7 +2053,12 @@ const Schedule = () => {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadCalendar(); }, []);
+  const loadManualEvents = async () => {
+    const { data } = await supabase.from('personal_events').select('*').eq('user_id','nikki');
+    if (data) setManualEvents(data);
+  };
+
+  useEffect(() => { loadCalendar(); loadManualEvents(); }, []);
 
   const isSameDay = (a,b) =>
     a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
@@ -1952,8 +2067,10 @@ const Schedule = () => {
     ...outlookEvents,
     ...manualEvents.map(e => ({
       ...e,
-      start: new Date(e.startISO),
-      end:   new Date(e.endISO),
+      summary: e.title,
+      start: new Date(`${e.date}T${e.time||'00:00'}:00`),
+      end:   new Date(`${e.date}T${e.end_time||e.time||'00:00'}:00`),
+      location: e.note,
       isManual: true,
     }))
   ].sort((a,b) => a.start - b.start);
@@ -1970,21 +2087,26 @@ const Schedule = () => {
     return '#3D8A5F';
   };
 
-  const addManualEvent = () => {
+  const addManualEvent = async () => {
     if (!newEvt.title.trim() || !newEvt.date) return;
-    const startISO = `${newEvt.date}T${newEvt.time}:00`;
-    const endISO   = `${newEvt.date}T${newEvt.endTime}:00`;
-    setManualEvents(prev => [...prev, {
-      id: Date.now(),
-      summary: newEvt.title,
-      location: newEvt.note,
-      startISO, endISO,
-    }]);
+    const { data } = await supabase.from('personal_events').insert({
+      title: newEvt.title,
+      date: newEvt.date,
+      time: newEvt.time,  // renamed from start_time but we use 'time' col
+      end_time: newEvt.endTime,
+      note: newEvt.note,
+      user_id: 'nikki',
+    }).select().single();
+    if (data) setManualEvents(prev => [...prev, data]);
     setShowAdd(false);
     setNewEvt({title:'', date:'', time:'12:00', endTime:'13:00', note:''});
-    // Jump to that day
-    setSelectedDay(new Date(startISO));
+    setSelectedDay(new Date(newEvt.date));
     setViewMode('day');
+  };
+
+  const deleteManualEvent = async (id) => {
+    await supabase.from('personal_events').delete().eq('id', id);
+    setManualEvents(prev => prev.filter(e => e.id !== id));
   };
 
   // ── Month calendar grid ──
@@ -2118,7 +2240,7 @@ const Schedule = () => {
                   fontFamily:"'Outfit',sans-serif"}}>📍 {evt.location}</div>}
               </div>
               {evt.isManual && (
-                <div onClick={()=>setManualEvents(prev=>prev.filter(e=>e.id!==evt.id))}
+                <div onClick={()=>deleteManualEvent(evt.id)}
                   style={{fontSize:15,color:'var(--ink-faint)',cursor:'pointer',
                     alignSelf:'center',padding:'0 4px'}}>×</div>
               )}
